@@ -49,3 +49,5 @@ and open http://localhost:8000 (demo passcodes are on the login page).
 - 13:45 IST: README (traceability, mermaid, screenshots, cron guide), AUDIT results, FINAL_REPORT written. Browser e2e: 0 axe violations, 0 console errors. Remaining: confirm Render redeploy.
 
 - Pass 4 (code quality refactor): core router split into auth/medications/doses/appointments/collaboration/common; SettingsTab split into four sections; named constants for limits/windows; docstrings and JSDoc on public functions and components; typed middleware (no type: ignore); audit docs moved to docs/; README Project structure section. All tests/linters green: backend 98 tests (96% coverage), frontend 70.
+
+- Pass 5 (hardening): all frontend deps pinned to exact versions (npm ci verified), HSTS/COOP/CORP headers, request body size limits (64 KB JSON, 6 MB upload), generic 500 handler with no stack traces, tests for each. Browser axe re-run: 15 views, 0 violations, 0 console errors.
