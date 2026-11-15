@@ -15,7 +15,7 @@ from fastapi.staticfiles import StaticFiles
 
 from .config import ROOT, get_settings
 from .db import connect, init_db
-from .routers import ai, core, extras, reminders
+from .routers import ai, appointments, auth, collaboration, doses, extras, medications, reminders
 from .services.reminders import run_reminders
 from .services.seed import seed_demo
 
@@ -90,7 +90,11 @@ def create_app() -> FastAPI:
     def health() -> dict[str, str]:
         return {"status": "ok"}
 
-    app.include_router(core.router)
+    app.include_router(auth.router)
+    app.include_router(medications.router)
+    app.include_router(doses.router)
+    app.include_router(appointments.router)
+    app.include_router(collaboration.router)
     app.include_router(reminders.router)
     app.include_router(extras.router)
     app.include_router(ai.router)

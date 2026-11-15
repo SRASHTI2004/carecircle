@@ -17,16 +17,10 @@ from ..security import email_limiter
 from ..services import changes, profiles
 from ..services.mailer import render_email, send_email
 from ..services.reminders import notify
+from .common import profile_row
 
 router = APIRouter(prefix="/api")
 ROLES = (ELDER, CARETAKER, FAMILY)
-
-
-def _profile(conn: sqlite3.Connection, session: Session) -> sqlite3.Row:
-    row: sqlite3.Row | None = conn.execute("SELECT * FROM profiles WHERE id = ?", (session.profile_id,)).fetchone()
-    if row is None:
-        raise HTTPException(404, "Profile not found.")
-    return row
 
 
 # ---------- passcode management ----------
@@ -88,7 +82,7 @@ def test_email(
             429, f"Too many test emails. Try again in {wait} seconds.", headers={"Retry-After": str(wait)}
         )
     email_limiter.record_failure(key)
-    profile = _profile(conn, session)
+    profile = profile_row(conn, session)
     text, page = render_email(
         profile["name"],
         "Test email from CareCircle",
@@ -113,7 +107,7 @@ def test_email(
 def get_emergency(
     conn: sqlite3.Connection = Depends(get_db), session: Session = Depends(require("view"))
 ) -> dict[str, Any]:
-    profile = _profile(conn, session)
+    profile = profile_row(conn, session)
     card = conn.execute("SELECT * FROM emergency_cards WHERE profile_id = ?", (session.profile_id,)).fetchone()
     fields = EmergencyIn().model_dump()
     data = {k: card[k] for k in fields} if card else fields
@@ -163,7 +157,7 @@ def put_emergency(
 def add_checkin(
     body: CheckinIn, conn: sqlite3.Connection = Depends(get_db), session: Session = Depends(require("checkin"))
 ) -> dict[str, Any]:
-    profile = _profile(conn, session)
+    profile = profile_row(conn, session)
     previous = conn.execute(
         "SELECT mood FROM checkins WHERE profile_id = ? ORDER BY id DESC LIMIT 1", (session.profile_id,)
     ).fetchone()

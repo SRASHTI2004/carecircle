@@ -7,7 +7,7 @@ Status key: **done**, **partial**, **missing**. "Start" is the state at the begi
 
 | # | Requirement | Start | Evidence at start | Now |
 |---|-------------|-------|-------------------|-----|
-| R1 | Manage daily **medications** | done | `routers/core.py` meds CRUD, `test_api.py` | done |
+| R1 | Manage daily **medications** | done | `routers/medications.py` meds CRUD, `test_api.py` | done |
 | R2 | Manage **healthcare routines** (BP/sugar checks, walks, water, physio) | missing | only medicines existed | done (kind=routine) |
 | R3 | Manage **medical appointments** | done | appointments CRUD + tests | done |
 | R4 | Keep **family and caretakers informed** | partial | email + comments + activity; no per-member preferences | done (notification prefs, feed, check-ins) |
@@ -38,7 +38,7 @@ Status key: **done**, **partial**, **missing**. "Start" is the state at the begi
 * **UI/UX:** no landing explanation or one-click demo buttons; no trend chart; elder mode functional but plain.
 * **Deployment/repo:** live; README lacks traceability table, diagram, screenshots, cron guide.
 
-(The "Now" column and a results section are filled in at the end of the work; see `FINAL_REPORT.md`.)
+(The "Now" column and a results section are filled in at the end of the work; see `FINAL_REPORT.md` in this folder.)
 
 ---
 

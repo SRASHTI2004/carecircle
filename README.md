@@ -86,16 +86,16 @@ gives the whole circle a shared view, proactive emails, and puts the elder's cho
 
 | # | Requirement from the challenge | Feature | Main file | Test |
 |---|---|---|---|---|
-| R1 | Manage daily medications | Medicine CRUD, archive, stock | `backend/app/routers/core.py`, `services/changes.py` | `test_api.py::test_medication_crud_and_activity_log` |
+| R1 | Manage daily medications | Medicine CRUD, archive, stock | `backend/app/routers/medications.py`, `services/changes.py` | `test_api.py::test_medication_crud_and_activity_log` |
 | R2 | Healthcare routines | `kind = routine` with the same schedule/adherence | `schemas.py::MedicationIn`, `services/reminders.py` | `test_features.py::test_routine_*` |
-| R3 | Medical appointments, upcoming list | Appointment CRUD | `routers/core.py` | `test_api.py::test_appointments_upcoming_and_validation` |
-| R4 | Keep family and caretakers informed | Emails, activity feed, notes, weekly summary, per-member preferences | `services/reminders.py`, `routers/core.py` | `test_features.py::test_contact_preferences_*` |
+| R3 | Medical appointments, upcoming list | Appointment CRUD | `routers/appointments.py` | `test_api.py::test_appointments_upcoming_and_validation` |
+| R4 | Keep family and caretakers informed | Emails, activity feed, notes, weekly summary, per-member preferences | `services/reminders.py`, `routers/collaboration.py` | `test_features.py::test_contact_preferences_*` |
 | R5 | Shared ecosystem (elder, caretaker, family) | One profile, three roles | `permissions.py` | `test_api.py::test_permission_matrix_for_edits` |
 | R6 | Secure passcode access | bcrypt, rate limit + lockout, token expiry, logout, rotate/revoke | `security.py`, `services/profiles.py`, `routers/extras.py` | `test_auth.py`, `test_features.py::test_*passcode*` |
 | R7 | View | All roles can view | `permissions.py` | `test_api.py::test_family_can_view_and_comment_only` |
 | R8 | Add, edit, manage | Full CRUD, validation, duplicate guard, approvals | `services/changes.py` | `test_api.py`, `test_features.py::test_duplicate_*` |
 | R9 | Track adherence | Per-dose status, weekly %, trend, per medicine | `services/adherence.py` | `test_adherence.py`, `test_features.py::test_weekly_trend_*` |
-| R10 | Upcoming appointments | Upcoming list, elder-mode next visit | `routers/core.py` | `test_api.py` |
+| R10 | Upcoming appointments | Upcoming list, elder-mode next visit | `routers/appointments.py` | `test_api.py` |
 | R11 | Email: upcoming doses | 15-minute window reminder | `services/reminders.py` | `test_reminders.py::test_upcoming_dose_*` |
 | R12 | Email: missed medications | 30 minutes, caretakers + family | `services/reminders.py` | `test_reminders.py::test_missed_dose_*` |
 | R13 | Email: appointments | 1 day and 2 hours before | `services/reminders.py` | `test_reminders.py::test_appointment_windows` |
@@ -103,7 +103,7 @@ gives the whole circle a shared view, proactive emails, and puts the elder's cho
 | R15 | Smarter | Prescription AI draft, AI summary, emergency card, check-ins, duplicate warning | `services/ai.py`, `routers/ai.py`, `routers/extras.py` | `test_ai.py`, `test_features.py` |
 | R16 | More accessible | Elder mode, read aloud, AAA contrast, axe + contrast tests | `frontend/src/components/ElderMode.tsx`, `styles.css` | `frontend/src/App.test.tsx`, `src/test/contrast.test.ts` |
 | R17 | More reliable | Idempotent reminders, retries, CI, 96% coverage | `services/mailer.py`, `.github/workflows/ci.yml` | `test_reminders.py`, `test_features.py` |
-| R18 | More collaborative | Notes, activity feed, notification preferences | `routers/core.py` | `test_features.py::test_contact_preferences_*` |
+| R18 | More collaborative | Notes, activity feed, notification preferences | `routers/collaboration.py` | `test_features.py::test_contact_preferences_*` |
 | R19 | Elder at the centre | Approval gate, elder-only emergency card, check-ins, passcode control | `services/changes.py`, `routers/extras.py` | `test_api.py::test_approval_workflow`, `test_features.py::test_emergency_*` |
 
 ## Architecture
@@ -132,9 +132,10 @@ flowchart LR
 ```
 backend/app/
   main.py          app factory, security headers, error format, scheduler, serves frontend/dist
-  routers/         core.py (profiles, meds, doses, appointments, activity, contacts, outbox)
+  routers/         auth.py (profiles, login, settings)  medications.py  doses.py (today, undo, adherence)
+                   appointments.py  collaboration.py (approvals, activity, notes, contacts, outbox)
                    extras.py (passcodes, test email, emergency card, check-ins)
-                   reminders.py (cron endpoint), ai.py (Gemini endpoints)
+                   reminders.py (cron endpoint), ai.py (Gemini endpoints), common.py (shared helpers)
   services/        adherence.py, changes.py (CRUD + approval gate + activity log), reminders.py (rules),
                    mailer.py (HTML/text, SMTP, retries), profiles.py, ai.py, seed.py
   permissions.py   role -> permission matrix and FastAPI dependencies   security.py  bcrypt, tokens, rate limiter
@@ -167,7 +168,7 @@ into the full-screen doctor view and `Escape` closes it, `lang="en"`, responsive
 Elder mode is WCAG **AAA** in both themes (every text pair at 7:1 or better, status colours 3:1 or better, checked by tests).
 Verified three ways: **axe-core in unit tests** on every screen (`npm test`), a **real-browser run** (Edge via
 Playwright, `npm run e2e`) with axe including colour contrast on 12 views as each role (0 violations, 0 console errors),
-and **computed contrast tests** for the CSS tokens. See `AUDIT.md`.
+and **computed contrast tests** for the CSS tokens. See [`docs/AUDIT.md`](docs/AUDIT.md).
 
 ## Security
 
@@ -183,6 +184,31 @@ and **computed contrast tests** for the CSS tokens. See `AUDIT.md`.
 * Secrets only from environment variables; `.env` is git-ignored (GitHub push protection is on); logs never contain
   keys or email content. Demo addresses (`example.com`) are never sent to a real mail server.
 * Pinned dependencies; `pip-audit` clean; `npm audit --omit=dev` clean (CI runs both).
+
+## Project structure
+
+```
+backend/                 FastAPI + SQLite service (Python 3.12)
+  app/                   application package (see Architecture above)
+  tests/                 pytest suite: unit, API and permission tests (96% coverage)
+  pyproject.toml         ruff (lint + format) and mypy (strict) configuration
+  requirements*.txt      pinned runtime and dev dependencies
+frontend/                React + TypeScript (Vite) app
+  src/components/        one component per screen or widget (DoseList, ElderMode, SettingsTab, ...)
+  src/api.ts, types.ts   typed API client and shared types
+  src/util.ts            small shared helpers (formatting, grouping, theme storage)
+  src/test/              mock API, axe helper, WCAG contrast tests
+  e2e/browser-check.mjs  real-browser click-through + accessibility scan
+  eslint.config.js, .prettierrc   lint and format configuration
+docs/                    AUDIT.md, FINAL_REPORT.md, screenshots, browser-check.json
+.github/workflows/       CI: lint, types, tests with coverage gate, audits, build
+Dockerfile, render.yaml  one-service deployment on Render
+```
+
+Conventions: type hints on every Python function (`mypy --strict`), TypeScript `strict` with no `any`, Pydantic models for
+every request body, parameterised SQL only, one responsibility per module. Before pushing run
+`ruff check . && ruff format --check . && mypy app && pytest` in `backend/` and
+`npm run lint && npm run format:check && npm test && npm run build` in `frontend/`.
 
 ## Setup
 
