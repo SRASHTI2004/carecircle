@@ -39,3 +39,20 @@ Status key: **done**, **partial**, **missing**. "Start" is the state at the begi
 * **Deployment/repo:** live; README lacks traceability table, diagram, screenshots, cron guide.
 
 (The "Now" column and a results section are filled in at the end of the work; see `FINAL_REPORT.md`.)
+
+---
+
+## Results at the end of this pass (13:45 IST)
+
+All 19 requirements are now **done**; the traceability table in `README.md` maps each to its feature, file and test.
+
+| Dimension | Evidence |
+|-----------|----------|
+| Code quality | `ruff check` + `ruff format --check` clean; `mypy --strict` clean (21 files); ESLint (typescript-eslint, react-hooks, jsx-a11y) + Prettier clean; TypeScript strict |
+| Security | Rate limits (login, profile creation, AI, test email); passcode rotate/revoke; X-Frame-Options/CSP/nosniff/referrer headers; `pip-audit` clean after upgrading FastAPI 0.163 / Starlette 1.10; `npm audit --omit=dev` = 0 (remaining advisories are dev-only tooling, not shipped); GitHub push protection caught a pasted key in `.env.example` before it left the machine (fixed, never pushed) |
+| Efficiency | Indexes on every hot lookup (outbox, pending, sessions, checkins, comments, contacts); 2 queries per dose listing (no N+1); pagination on activity, comments, outbox; weekly AI summary cached 6 h; scheduler runs small indexed queries |
+| Testing | Backend 96 tests, **96% coverage** (CI gate 90%); frontend 38 tests (screens per role, duplicate guard, read aloud, doctor view, test email, axe, contrast) |
+| Accessibility | axe-core in unit tests on every screen; **real-browser run** (Edge) with axe incl. colour contrast on 12 views as 4 sessions: **0 violations, 0 console errors** (`docs/browser-check.json`); first run found one real issue (no `h1` in standard view), fixed; AA contrast tests for all tokens and AAA for Elder mode |
+| Problem alignment | Routines, per-member email preferences, emergency card, check-ins, passcode control, duplicate guard added |
+| UI/UX | Landing + one-click demo, redesigned AAA Elder mode, trend chart, empty/loading/error states, toasts, confirm before destructive actions, phone layout verified (no horizontal scroll) |
+| Deployment / repo | CI on every push; README with live link, demo guide, traceability, Mermaid diagram, screenshots, cron guide |

@@ -19,7 +19,7 @@ export function AdherenceChart({ weekly }: { weekly: Weekly }) {
         <line x1="0" y1={h} x2={w} y2={h} stroke="currentColor" strokeWidth="1" opacity="0.4" />
         {days.map((d, i) => {
           const pct = d.percent ?? 0;
-          const barH = (h * pct) / 100;
+          const barH = ((h - 20) * pct) / 100;
           const label = WEEKDAY.format(new Date(`${d.date}T12:00:00`));
           return (
             <g key={d.date}>
@@ -46,7 +46,7 @@ export function AdherenceChart({ weekly }: { weekly: Weekly }) {
                   />
                   <text
                     x={i * bar + bar / 2}
-                    y={Math.max(12, h - barH - 4)}
+                    y={h - barH - 4}
                     textAnchor="middle"
                     fontSize="11"
                     fill="currentColor"

@@ -1,0 +1,90 @@
+{
+  "base": "http://localhost:8767",
+  "consoleErrors": [],
+  "axe": {
+    "landing": [],
+    "elder-mode": [],
+    "elder-today": [],
+    "elder-medicines-routines": [],
+    "elder-appointments": [],
+    "elder-care-circle": [],
+    "elder-emergency-card": [],
+    "elder-email-reminders": [],
+    "elder-settings": [],
+    "doctor-view": [],
+    "caretaker-phone-today": [],
+    "family-care": []
+  },
+  "steps": [
+    {
+      "name": "landing renders",
+      "ok": true
+    },
+    {
+      "name": "elder check-in",
+      "ok": true
+    },
+    {
+      "name": "elder marks dose",
+      "ok": true
+    },
+    {
+      "name": "tab Today",
+      "ok": true
+    },
+    {
+      "name": "tab Medicines & routines",
+      "ok": true
+    },
+    {
+      "name": "tab Appointments",
+      "ok": true
+    },
+    {
+      "name": "tab Care circle",
+      "ok": true
+    },
+    {
+      "name": "tab Emergency card",
+      "ok": true
+    },
+    {
+      "name": "tab Email reminders",
+      "ok": true
+    },
+    {
+      "name": "tab Settings",
+      "ok": true
+    },
+    {
+      "name": "doctor view + Escape closes",
+      "ok": true
+    },
+    {
+      "name": "test email toast: Email (SMTP) is not configured on this server, so the message was added to the demo outbox instead.",
+      "ok": true
+    },
+    {
+      "name": "caretaker adds routine",
+      "ok": true
+    },
+    {
+      "name": "no horizontal scroll on phone",
+      "ok": true
+    },
+    {
+      "name": "family has no Taken buttons",
+      "ok": true
+    },
+    {
+      "name": "family has no Add medicine",
+      "ok": true
+    }
+  ],
+  "summary": {
+    "consoleErrors": 0,
+    "axePagesChecked": 12,
+    "axePagesWithViolations": 0,
+    "failedSteps": 0
+  }
+}

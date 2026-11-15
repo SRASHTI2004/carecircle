@@ -120,9 +120,9 @@ export function App() {
         Skip to content
       </a>
       <header className="topbar">
-        <div className="brand">
+        <h1 className="brand">
           CareCircle <span className="muted">for {me.profile.name}</span>
-        </div>
+        </h1>
         <div className="row wrap">
           <span className="badge" aria-label={`Signed in as ${ROLE_LABEL[me.role]}`}>
             {ROLE_LABEL[me.role]}
