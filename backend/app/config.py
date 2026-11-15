@@ -33,6 +33,7 @@ class Settings:
 
     @property
     def smtp_configured(self) -> bool:
+        """Smtp configured."""
         return bool(self.smtp_host and self.from_email)
 
 

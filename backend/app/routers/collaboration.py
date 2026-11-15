@@ -27,6 +27,7 @@ router = APIRouter(prefix="/api")
 def list_pending(
     conn: sqlite3.Connection = Depends(get_db), session: Session = Depends(require("view"))
 ) -> list[dict[str, Any]]:
+    """List pending."""
     rows = conn.execute(
         "SELECT id, entity, op, summary, requested_by, created_at FROM pending_changes"
         " WHERE profile_id = ? AND status = 'pending' ORDER BY id DESC",
@@ -42,6 +43,7 @@ def decide_pending(
     conn: sqlite3.Connection = Depends(get_db),
     session: Session = Depends(require("approve")),
 ) -> dict[str, Any]:
+    """Decide pending."""
     if decision not in ("approve", "reject"):
         raise HTTPException(404, "Unknown decision.")
     return changes.resolve_pending(conn, session.profile_id, change_id, decision == "approve")
@@ -54,6 +56,7 @@ def activity(
     conn: sqlite3.Connection = Depends(get_db),
     session: Session = Depends(require("view")),
 ) -> list[dict[str, Any]]:
+    """Activity."""
     rows = conn.execute(
         "SELECT actor_role, action, detail, created_at FROM activity_log WHERE profile_id = ?"
         " ORDER BY id DESC LIMIT ? OFFSET ?",
@@ -69,6 +72,7 @@ def list_comments(
     conn: sqlite3.Connection = Depends(get_db),
     session: Session = Depends(require("view")),
 ) -> list[dict[str, Any]]:
+    """List comments."""
     rows = conn.execute(
         "SELECT role, text, created_at FROM comments WHERE profile_id = ? ORDER BY id DESC LIMIT ? OFFSET ?",
         (session.profile_id, limit, offset),
@@ -80,6 +84,7 @@ def list_comments(
 def add_comment(
     body: CommentIn, conn: sqlite3.Connection = Depends(get_db), session: Session = Depends(require("comment"))
 ) -> dict[str, str]:
+    """Add comment."""
     conn.execute(
         "INSERT INTO comments (profile_id, role, text, created_at) VALUES (?,?,?,?)",
         (session.profile_id, session.role, body.text, utcnow().isoformat()),
@@ -93,6 +98,7 @@ def add_comment(
 def list_contacts(
     conn: sqlite3.Connection = Depends(get_db), session: Session = Depends(require("manage_contacts"))
 ) -> list[dict[str, Any]]:
+    """List contacts."""
     rows = conn.execute(
         "SELECT id, name, email, role, notify FROM contacts WHERE profile_id = ? ORDER BY role, name",
         (session.profile_id,),
@@ -104,6 +110,7 @@ def list_contacts(
 def add_contact(
     body: ContactIn, conn: sqlite3.Connection = Depends(get_db), session: Session = Depends(require("manage_contacts"))
 ) -> dict[str, str]:
+    """Add contact."""
     conn.execute(
         "INSERT INTO contacts (profile_id, name, email, role, notify) VALUES (?,?,?,?,?)",
         (
@@ -126,6 +133,7 @@ def set_contact_notify(
     conn: sqlite3.Connection = Depends(get_db),
     session: Session = Depends(require("manage_contacts")),
 ) -> dict[str, list[str]]:
+    """Set contact notify."""
     chosen: list[str] = sorted(set(body.notify))
     cur = conn.execute(
         "UPDATE contacts SET notify = ? WHERE id = ? AND profile_id = ?",
@@ -142,6 +150,7 @@ def set_contact_notify(
 def delete_contact(
     contact_id: int, conn: sqlite3.Connection = Depends(get_db), session: Session = Depends(require("manage_contacts"))
 ) -> Response:
+    """Delete contact."""
     conn.execute("DELETE FROM contacts WHERE id = ? AND profile_id = ?", (contact_id, session.profile_id))
     conn.commit()
     return Response(status_code=204)
@@ -154,6 +163,7 @@ def outbox(
     conn: sqlite3.Connection = Depends(get_db),
     session: Session = Depends(require("view")),
 ) -> dict[str, Any]:
+    """Outbox."""
     rows = conn.execute(
         "SELECT id, to_email, subject, body, delivered, error, created_at FROM outbox WHERE profile_id = ?"
         " ORDER BY id DESC LIMIT ? OFFSET ?",

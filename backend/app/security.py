@@ -18,11 +18,13 @@ ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
 
 
 def hash_passcode(passcode: str) -> str:
+    """Hash passcode."""
     rounds = get_settings().bcrypt_rounds
     return bcrypt.hashpw(passcode.encode(), bcrypt.gensalt(rounds)).decode()
 
 
 def verify_passcode(passcode: str, hashed: str) -> bool:
+    """Verify passcode."""
     try:
         return bcrypt.checkpw(passcode.encode(), hashed.encode())
     except ValueError:
@@ -30,6 +32,7 @@ def verify_passcode(passcode: str, hashed: str) -> bool:
 
 
 def random_code(length: int) -> str:
+    """Random code."""
     return "".join(secrets.choice(ALPHABET) for _ in range(length))
 
 
@@ -45,10 +48,12 @@ def new_token() -> tuple[str, str]:
 
 
 def hash_token(token: str) -> str:
+    """Hash token."""
     return hashlib.sha256(token.encode()).hexdigest()
 
 
 def session_expiry() -> str:
+    """Session expiry."""
     return (utcnow() + timedelta(hours=get_settings().session_hours)).isoformat()
 
 
@@ -79,12 +84,14 @@ class RateLimiter:
             return max(1, int(self.window - (now - hits[0])))
 
     def record_failure(self, key: str, now: float | None = None) -> None:
+        """Record failure."""
         now = time.monotonic() if now is None else now
         with self._lock:
             self._prune(key, now)
             self._hits.setdefault(key, []).append(now)
 
     def reset(self, key: str) -> None:
+        """Reset."""
         with self._lock:
             self._hits.pop(key, None)
 

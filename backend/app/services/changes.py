@@ -19,6 +19,7 @@ ENTITIES = {"medication", "appointment"}
 
 
 def log_activity(conn: sqlite3.Connection, profile_id: int, role: str, action: str, detail: str) -> None:
+    """Log activity."""
     conn.execute(
         "INSERT INTO activity_log (profile_id, actor_role, action, detail, created_at) VALUES (?,?,?,?,?)",
         (profile_id, role, action, detail, utcnow().isoformat()),
@@ -138,6 +139,7 @@ def submit_change(
 
 
 def resolve_pending(conn: sqlite3.Connection, profile_id: int, change_id: int, approve: bool) -> dict[str, Any]:
+    """Resolve pending."""
     row = conn.execute(
         "SELECT * FROM pending_changes WHERE id = ? AND profile_id = ? AND status = 'pending'", (change_id, profile_id)
     ).fetchone()

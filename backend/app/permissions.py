@@ -39,6 +39,7 @@ PERMISSIONS: dict[str, frozenset[str]] = {
 
 
 def can(role: str, permission: str) -> bool:
+    """Can."""
     return permission in PERMISSIONS.get(role, frozenset())
 
 
@@ -66,7 +67,10 @@ def current_session(
 
 
 def require(permission: str) -> Callable[..., Session]:
+    """Require."""
+
     def dependency(session: Session = Depends(current_session)) -> Session:
+        """Dependency."""
         if not can(session.role, permission):
             raise HTTPException(status.HTTP_403_FORBIDDEN, "Your role is not allowed to do that.")
         return session

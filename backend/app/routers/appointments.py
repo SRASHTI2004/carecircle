@@ -27,6 +27,7 @@ def _appt_out(row: sqlite3.Row) -> dict[str, Any]:
 def list_appointments(
     upcoming: bool = True, conn: sqlite3.Connection = Depends(get_db), session: Session = Depends(require("view"))
 ) -> list[dict[str, Any]]:
+    """List appointments."""
     now = fmt_slot(local_now(conn, session))
     sql = "SELECT * FROM appointments WHERE profile_id = ? AND starts_at >= ? ORDER BY starts_at"
     if not upcoming:
@@ -41,6 +42,7 @@ def add_appointment(
     conn: sqlite3.Connection = Depends(get_db),
     session: Session = Depends(require("edit_care")),
 ) -> dict[str, Any]:
+    """Add appointment."""
     payload = {**body.model_dump(mode="json"), "starts_at": fmt_slot(body.starts_at)}
     result = changes.submit_change(conn, session, "appointment", "create", payload)
     response.status_code = 201 if result["status"] == "applied" else 202
@@ -55,6 +57,7 @@ def edit_appointment(
     conn: sqlite3.Connection = Depends(get_db),
     session: Session = Depends(require("edit_care")),
 ) -> dict[str, Any]:
+    """Edit appointment."""
     payload = {**body.model_dump(mode="json"), "starts_at": fmt_slot(body.starts_at), "id": appt_id}
     result = changes.submit_change(conn, session, "appointment", "update", payload)
     response.status_code = 200 if result["status"] == "applied" else 202
@@ -68,6 +71,7 @@ def delete_appointment(
     conn: sqlite3.Connection = Depends(get_db),
     session: Session = Depends(require("edit_care")),
 ) -> dict[str, Any]:
+    """Delete appointment."""
     row = conn.execute(
         "SELECT doctor FROM appointments WHERE id = ? AND profile_id = ?", (appt_id, session.profile_id)
     ).fetchone()

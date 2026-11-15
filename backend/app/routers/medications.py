@@ -37,6 +37,7 @@ def _med_out(row: sqlite3.Row) -> dict[str, Any]:
 def list_medications(
     conn: sqlite3.Connection = Depends(get_db), session: Session = Depends(require("view"))
 ) -> list[dict[str, Any]]:
+    """List medications."""
     rows = conn.execute(
         "SELECT * FROM medications WHERE profile_id = ? AND archived = 0 ORDER BY name", (session.profile_id,)
     )
@@ -64,6 +65,7 @@ def add_medication(
     conn: sqlite3.Connection = Depends(get_db),
     session: Session = Depends(require("edit_care")),
 ) -> dict[str, Any]:
+    """Add medication."""
     _check_duplicate(conn, session.profile_id, body, allow_duplicate)
     result = changes.submit_change(conn, session, "medication", "create", body.model_dump(mode="json"))
     response.status_code = 201 if result["status"] == "applied" else 202
@@ -79,6 +81,7 @@ def edit_medication(
     conn: sqlite3.Connection = Depends(get_db),
     session: Session = Depends(require("edit_care")),
 ) -> dict[str, Any]:
+    """Edit medication."""
     _check_duplicate(conn, session.profile_id, body, allow_duplicate, med_id)
     result = changes.submit_change(
         conn, session, "medication", "update", {**body.model_dump(mode="json"), "id": med_id}
@@ -94,6 +97,7 @@ def delete_medication(
     conn: sqlite3.Connection = Depends(get_db),
     session: Session = Depends(require("edit_care")),
 ) -> dict[str, Any]:
+    """Delete medication."""
     row = conn.execute(
         "SELECT name FROM medications WHERE id = ? AND profile_id = ? AND archived = 0", (med_id, session.profile_id)
     ).fetchone()

@@ -21,6 +21,7 @@ class Strict(BaseModel):
 
 
 def normalize_times(values: list[str]) -> list[str]:
+    """Normalize times."""
     for v in values:
         if not HHMM.match(v):
             raise ValueError(f"'{v}' is not a valid HH:MM time")

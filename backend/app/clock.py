@@ -9,10 +9,12 @@ ISO_MINUTES = "%Y-%m-%dT%H:%M"
 
 
 def utcnow() -> datetime:
+    """Utcnow."""
     return datetime.now(UTC)
 
 
 def valid_timezone(name: str) -> bool:
+    """Valid timezone."""
     try:
         ZoneInfo(name)
     except (ZoneInfoNotFoundError, ValueError, OSError):
@@ -29,8 +31,10 @@ def to_local(tz_name: str, now_utc: datetime | None = None) -> datetime:
 
 
 def parse_slot(value: str) -> datetime:
+    """Parse slot."""
     return datetime.strptime(value, ISO_MINUTES)
 
 
 def fmt_slot(value: datetime) -> str:
+    """Fmt slot."""
     return value.strftime(ISO_MINUTES)

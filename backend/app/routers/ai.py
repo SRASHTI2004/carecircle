@@ -88,6 +88,7 @@ async def read_prescription(
 def weekly_summary(
     conn: sqlite3.Connection = Depends(get_db), session: Session = Depends(require("view"))
 ) -> dict[str, Any]:
+    """Weekly summary."""
     profile = conn.execute("SELECT name, timezone FROM profiles WHERE id = ?", (session.profile_id,)).fetchone()
     stats = adherence.weekly_stats(conn, session.profile_id, to_local(profile["timezone"]))
     facts = ai.plain_summary(profile["name"], stats)

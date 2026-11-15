@@ -68,6 +68,7 @@ PRESCRIPTION_PROMPT = (
 
 
 def extract_prescription(image: bytes, mime_type: str) -> DraftPrescription:
+    """Extract prescription."""
     parts: list[dict[str, Any]] = [
         {"text": PRESCRIPTION_PROMPT},
         {"inline_data": {"mime_type": mime_type, "data": base64.b64encode(image).decode()}},
@@ -76,6 +77,7 @@ def extract_prescription(image: bytes, mime_type: str) -> DraftPrescription:
 
 
 def draft_times(times_per_day: int) -> list[str]:
+    """Draft times."""
     return DEFAULT_TIMES[max(1, min(6, times_per_day))]
 
 
@@ -98,6 +100,7 @@ def plain_summary(name: str, stats: dict[str, Any]) -> str:
 
 
 def weekly_summary(name: str, stats: dict[str, Any]) -> WeeklySummaryAI:
+    """Weekly summary."""
     prompt = (
         "Write a warm, plain-language 2-3 sentence weekly update for the family of an elderly person, using ONLY these "
         "facts. Do not give medical advice, diagnoses, or suggest changing any medicine. "

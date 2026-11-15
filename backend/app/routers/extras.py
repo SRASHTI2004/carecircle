@@ -42,6 +42,7 @@ def _check_role(role: str, session: Session) -> None:
 def list_passcodes(
     conn: sqlite3.Connection = Depends(get_db), session: Session = Depends(require("manage_passcodes"))
 ) -> list[dict[str, Any]]:
+    """List passcodes."""
     active = {r["role"] for r in conn.execute("SELECT role FROM passcodes WHERE profile_id = ?", (session.profile_id,))}
     return [{"role": r, "active": r in active, "can_manage": r in _managed_roles(session.role)} for r in ROLES]
 
@@ -50,6 +51,7 @@ def list_passcodes(
 def rotate(
     role: str, conn: sqlite3.Connection = Depends(get_db), session: Session = Depends(require("manage_passcodes"))
 ) -> dict[str, str]:
+    """Rotate."""
     _check_role(role, session)
     passcode = profiles.rotate_passcode(conn, session.profile_id, role, session.role)
     return {"role": role, "passcode": passcode, "note": "Share this now; it is shown only once."}
@@ -59,6 +61,7 @@ def rotate(
 def revoke(
     role: str, conn: sqlite3.Connection = Depends(get_db), session: Session = Depends(require("manage_passcodes"))
 ) -> dict[str, str]:
+    """Revoke."""
     _check_role(role, session)
     if role == session.role:
         raise HTTPException(409, "You cannot revoke your own passcode. Rotate it instead.")
@@ -75,6 +78,7 @@ def test_email(
     conn: sqlite3.Connection = Depends(get_db),
     session: Session = Depends(require("manage_contacts")),
 ) -> dict[str, Any]:
+    """Test email."""
     key = str(session.profile_id)
     wait = email_limiter.retry_after(key)
     if wait:
@@ -107,6 +111,7 @@ def test_email(
 def get_emergency(
     conn: sqlite3.Connection = Depends(get_db), session: Session = Depends(require("view"))
 ) -> dict[str, Any]:
+    """Get emergency."""
     profile = profile_row(conn, session)
     card = conn.execute("SELECT * FROM emergency_cards WHERE profile_id = ?", (session.profile_id,)).fetchone()
     fields = EmergencyIn().model_dump()
@@ -136,6 +141,7 @@ def get_emergency(
 def put_emergency(
     body: EmergencyIn, conn: sqlite3.Connection = Depends(get_db), session: Session = Depends(require("edit_emergency"))
 ) -> dict[str, str]:
+    """Put emergency."""
     d = body.model_dump()
     cols = ", ".join(d)
     marks = ", ".join("?" * len(d))
@@ -157,6 +163,7 @@ def put_emergency(
 def add_checkin(
     body: CheckinIn, conn: sqlite3.Connection = Depends(get_db), session: Session = Depends(require("checkin"))
 ) -> dict[str, Any]:
+    """Add checkin."""
     profile = profile_row(conn, session)
     previous = conn.execute(
         "SELECT mood FROM checkins WHERE profile_id = ? ORDER BY id DESC LIMIT 1", (session.profile_id,)
@@ -190,6 +197,7 @@ def list_checkins(
     conn: sqlite3.Connection = Depends(get_db),
     session: Session = Depends(require("view")),
 ) -> list[dict[str, Any]]:
+    """List checkins."""
     rows = conn.execute(
         "SELECT mood, note, logged_by, created_at FROM checkins WHERE profile_id = ? ORDER BY id DESC LIMIT ?",
         (session.profile_id, limit),

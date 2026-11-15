@@ -18,6 +18,7 @@ router = APIRouter(prefix="/api/reminders")
 def run(
     x_reminder_token: str | None = Header(default=None), conn: sqlite3.Connection = Depends(get_db)
 ) -> dict[str, dict[str, int]]:
+    """Run."""
     expected = get_settings().reminder_token
     if not expected:
         raise HTTPException(503, "Reminder endpoint is disabled: REMINDER_TOKEN is not configured.")

@@ -161,6 +161,7 @@ MIGRATIONS = [
 
 
 def connect() -> sqlite3.Connection:
+    """Connect."""
     conn = sqlite3.connect(get_settings().database_path, check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
@@ -168,6 +169,7 @@ def connect() -> sqlite3.Connection:
 
 
 def init_db() -> None:
+    """Init db."""
     conn = connect()
     try:
         conn.executescript(SCHEMA)

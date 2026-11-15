@@ -48,6 +48,7 @@ async def _scheduler() -> None:
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    """Create the schema, seed the demo profile and run the reminder scheduler."""
     init_db()
     conn = connect()
     try:
@@ -61,6 +62,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
 
 
 def create_app() -> FastAPI:
+    """Create app."""
     app = FastAPI(title="CareCircle", version="1.0.0", lifespan=lifespan)
     app.add_middleware(
         CORSMiddleware,
@@ -71,6 +73,7 @@ def create_app() -> FastAPI:
 
     @app.middleware("http")
     async def security_headers(request: Request, call_next: RequestResponseEndpoint) -> Response:
+        """Add security headers to every response."""
         response: Response = await call_next(request)
         response.headers.setdefault("Content-Security-Policy", CSP)
         response.headers.setdefault("X-Content-Type-Options", "nosniff")
@@ -89,6 +92,7 @@ def create_app() -> FastAPI:
 
     @app.get("/api/health")
     def health() -> dict[str, str]:
+        """Liveness probe used by Render."""
         return {"status": "ok"}
 
     app.include_router(auth.router)
@@ -105,6 +109,7 @@ def create_app() -> FastAPI:
 
         @app.get("/{path:path}", include_in_schema=False)
         def spa(path: str) -> FileResponse:
+            """Serve a built frontend file, falling back to index.html for client-side routes."""
             if path.startswith("api/"):
                 raise HTTPException(404)
             candidate = (DIST / path).resolve()

@@ -26,6 +26,7 @@ MARKABLE_DAYS_BACK = 1  # doses from today and yesterday can be marked
 def doses_today(
     conn: sqlite3.Connection = Depends(get_db), session: Session = Depends(require("view"))
 ) -> dict[str, Any]:
+    """Doses today."""
     now = local_now(conn, session)
     doses = adherence.doses_between(conn, session.profile_id, now.date(), now.date(), now)
     return {"now": fmt_slot(now), "doses": doses}
@@ -35,6 +36,7 @@ def doses_today(
 def log_dose(
     body: DoseAction, conn: sqlite3.Connection = Depends(get_db), session: Session = Depends(require("log_dose"))
 ) -> dict[str, Any]:
+    """Log dose."""
     now = local_now(conn, session)
     med = conn.execute(
         "SELECT * FROM medications WHERE id = ? AND profile_id = ? AND archived = 0",
@@ -80,4 +82,5 @@ def log_dose(
 
 @router.get("/adherence/weekly")
 def weekly(conn: sqlite3.Connection = Depends(get_db), session: Session = Depends(require("view"))) -> dict[str, Any]:
+    """Weekly."""
     return adherence.weekly_stats(conn, session.profile_id, local_now(conn, session))

@@ -23,6 +23,7 @@ router = APIRouter(prefix="/api")
 
 @router.post("/profiles", status_code=201)
 def create_profile(body: ProfileCreate, request: Request, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+    """Create profile."""
     key = client_ip(request)
     wait = create_limiter.retry_after(key)
     if wait:
@@ -40,6 +41,7 @@ def create_profile(body: ProfileCreate, request: Request, conn: sqlite3.Connecti
 
 @router.post("/auth/login")
 def login(body: LoginIn, request: Request, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+    """Login."""
     token, profile_id, role = profiles.login(conn, body.passcode, client_ip(request))
     return {"token": token, "role": role, "profile_id": profile_id}
 
@@ -48,6 +50,7 @@ def login(body: LoginIn, request: Request, conn: sqlite3.Connection = Depends(ge
 def logout(
     request: Request, conn: sqlite3.Connection = Depends(get_db), _: Session = Depends(current_session)
 ) -> Response:
+    """Logout."""
     token = request.headers["authorization"][7:].strip()
     conn.execute("DELETE FROM sessions WHERE token_hash = ?", (hash_token(token),))
     conn.commit()
@@ -56,6 +59,7 @@ def logout(
 
 @router.get("/me")
 def me(conn: sqlite3.Connection = Depends(get_db), session: Session = Depends(current_session)) -> dict[str, Any]:
+    """Me."""
     p = profile_row(conn, session)
     pending = conn.execute(
         "SELECT COUNT(*) FROM pending_changes WHERE profile_id = ? AND status = 'pending'", (p["id"],)
@@ -77,6 +81,7 @@ def me(conn: sqlite3.Connection = Depends(get_db), session: Session = Depends(cu
 def update_settings(
     body: SettingsIn, conn: sqlite3.Connection = Depends(get_db), session: Session = Depends(require("manage_settings"))
 ) -> dict[str, bool]:
+    """Update settings."""
     conn.execute(
         "UPDATE profiles SET require_approval = ? WHERE id = ?", (int(body.require_approval), session.profile_id)
     )
