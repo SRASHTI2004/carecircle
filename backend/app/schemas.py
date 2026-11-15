@@ -1,4 +1,5 @@
 """Pydantic request/response models (input validation lives here)."""
+
 from __future__ import annotations
 
 import re
@@ -8,6 +9,9 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 Role = Literal["elder", "caretaker", "family"]
+NotifyType = Literal["dose_upcoming", "dose_missed", "routine", "appointment", "low_stock", "wellbeing"]
+ALL_NOTIFY: list[str] = ["dose_upcoming", "dose_missed", "routine", "appointment", "low_stock", "wellbeing"]
+Mood = Literal["good", "okay", "unwell"]
 HHMM = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
 EMAIL = re.compile(r"^[^@\s]{1,64}@[^@\s]{1,255}\.[^@\s]{2,}$")
 
@@ -27,6 +31,7 @@ class ContactIn(Strict):
     name: str = Field(min_length=1, max_length=80)
     email: str = Field(max_length=320)
     role: Role
+    notify: list[NotifyType] | None = None  # None = all reminder types
 
     @field_validator("email")
     @classmethod
@@ -47,8 +52,11 @@ class LoginIn(Strict):
 
 
 class MedicationIn(Strict):
+    """A medicine, or a daily routine (BP check, walk, water, physio) with the same schedule."""
+
+    kind: Literal["medicine", "routine"] = "medicine"
     name: str = Field(min_length=1, max_length=100)
-    dose: str = Field(min_length=1, max_length=100)
+    dose: str = Field(default="", max_length=100)
     times: list[str] = Field(min_length=1, max_length=8)
     start_date: date
     end_date: date | None = None
@@ -63,6 +71,8 @@ class MedicationIn(Strict):
 
     @model_validator(mode="after")
     def _dates(self) -> MedicationIn:
+        if self.kind == "medicine" and not self.dose:
+            raise ValueError("dose is required for a medicine")
         if self.end_date is not None and self.end_date < self.start_date:
             raise ValueError("end_date must not be before start_date")
         return self
@@ -110,3 +120,33 @@ class DraftPrescription(BaseModel):
 
 class WeeklySummaryAI(BaseModel):
     summary: str = Field(min_length=1, max_length=1200)
+
+
+class ContactNotify(Strict):
+    notify: list[NotifyType]
+
+
+class EmergencyIn(Strict):
+    blood_group: str = Field(default="", max_length=10)
+    allergies: str = Field(default="", max_length=500)
+    conditions: str = Field(default="", max_length=500)
+    doctor_name: str = Field(default="", max_length=100)
+    doctor_phone: str = Field(default="", max_length=40)
+    emergency_contacts: str = Field(default="", max_length=500)
+    notes: str = Field(default="", max_length=500)
+
+
+class CheckinIn(Strict):
+    mood: Mood
+    note: str = Field(default="", max_length=300)
+
+
+class TestEmailIn(Strict):
+    email: str = Field(max_length=320)
+
+    @field_validator("email")
+    @classmethod
+    def _email(cls, v: str) -> str:
+        if not EMAIL.match(v):
+            raise ValueError("invalid email address")
+        return v.lower()

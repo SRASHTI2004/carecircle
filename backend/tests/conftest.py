@@ -28,7 +28,13 @@ def client():
     for suffix in ("", "-journal"):
         if os.path.exists(path + suffix):
             os.remove(path + suffix)
-    for limiter in (security.client_limiter, security.profile_limiter, security.create_limiter):
+    for limiter in (
+        security.client_limiter,
+        security.profile_limiter,
+        security.create_limiter,
+        security.ai_limiter,
+        security.email_limiter,
+    ):
         limiter._hits.clear()
     with TestClient(create_app()) as c:  # lifespan creates schema + seeds the DEMO profile
         yield c

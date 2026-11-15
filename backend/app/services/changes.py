@@ -3,6 +3,7 @@
 Every mutation goes through `submit_change`. If the elder has turned on "require my approval"
 and a non-elder makes the change, it is queued as a pending change instead of being applied.
 """
+
 from __future__ import annotations
 
 import json
@@ -31,10 +32,21 @@ def _describe(entity: str, op: str, payload: dict[str, Any]) -> str:
 
 def _exists(conn: sqlite3.Connection, profile_id: int, entity: str, item_id: int) -> sqlite3.Row:
     table = "medications" if entity == "medication" else "appointments"
-    row = conn.execute(f"SELECT * FROM {table} WHERE id = ? AND profile_id = ?", (item_id, profile_id)).fetchone()  # noqa: S608 - fixed table names
+    row: sqlite3.Row | None = conn.execute(
+        f"SELECT * FROM {table} WHERE id = ? AND profile_id = ?", (item_id, profile_id)
+    ).fetchone()  # noqa: S608 - fixed table names
     if row is None:
         raise HTTPException(404, f"That {entity} was not found.")
     return row
+
+
+def find_duplicate(conn: sqlite3.Connection, profile_id: int, name: str, exclude_id: int | None = None) -> str | None:
+    """Name of an active medicine/routine with the same name (case-insensitive), if any."""
+    row = conn.execute(
+        "SELECT name FROM medications WHERE profile_id = ? AND archived = 0 AND lower(name) = lower(?) AND id != ?",
+        (profile_id, name.strip(), exclude_id or 0),
+    ).fetchone()
+    return str(row["name"]) if row else None
 
 
 def apply_change(conn: sqlite3.Connection, profile_id: int, entity: str, op: str, payload: dict[str, Any]) -> int:
@@ -42,11 +54,20 @@ def apply_change(conn: sqlite3.Connection, profile_id: int, entity: str, op: str
     if entity == "medication":
         if op == "create":
             cur = conn.execute(
-                "INSERT INTO medications (profile_id, name, dose, times, start_date, end_date, instructions, stock, low_stock_threshold)"
-                " VALUES (?,?,?,?,?,?,?,?,?)",
-                (profile_id, payload["name"], payload["dose"], json.dumps(payload["times"]), payload["start_date"],
-                 payload.get("end_date"), payload.get("instructions", ""), payload.get("stock", 0),
-                 payload.get("low_stock_threshold", 5)),
+                "INSERT INTO medications (profile_id, name, dose, times, start_date, end_date, instructions, stock,"
+                " low_stock_threshold, kind) VALUES (?,?,?,?,?,?,?,?,?,?)",
+                (
+                    profile_id,
+                    payload["name"],
+                    payload["dose"],
+                    json.dumps(payload["times"]),
+                    payload["start_date"],
+                    payload.get("end_date"),
+                    payload.get("instructions", ""),
+                    payload.get("stock", 0),
+                    payload.get("low_stock_threshold", 5),
+                    payload.get("kind", "medicine"),
+                ),
             )
             return int(cur.lastrowid or 0)
         item_id = int(payload["id"])
@@ -54,10 +75,20 @@ def apply_change(conn: sqlite3.Connection, profile_id: int, entity: str, op: str
         if op == "update":
             conn.execute(
                 "UPDATE medications SET name=?, dose=?, times=?, start_date=?, end_date=?, instructions=?, stock=?,"
-                " low_stock_threshold=? WHERE id=? AND profile_id=?",
-                (payload["name"], payload["dose"], json.dumps(payload["times"]), payload["start_date"],
-                 payload.get("end_date"), payload.get("instructions", ""), payload.get("stock", 0),
-                 payload.get("low_stock_threshold", 5), item_id, profile_id),
+                " low_stock_threshold=?, kind=? WHERE id=? AND profile_id=?",
+                (
+                    payload["name"],
+                    payload["dose"],
+                    json.dumps(payload["times"]),
+                    payload["start_date"],
+                    payload.get("end_date"),
+                    payload.get("instructions", ""),
+                    payload.get("stock", 0),
+                    payload.get("low_stock_threshold", 5),
+                    payload.get("kind", "medicine"),
+                    item_id,
+                    profile_id,
+                ),
             )
         else:  # delete = archive, so adherence history is kept
             conn.execute("UPDATE medications SET archived = 1 WHERE id=? AND profile_id=?", (item_id, profile_id))
@@ -119,7 +150,9 @@ def resolve_pending(conn: sqlite3.Connection, profile_id: int, change_id: int, a
             conn.execute("UPDATE pending_changes SET status = 'rejected' WHERE id = ?", (change_id,))
             conn.commit()
             raise HTTPException(409, "The item changed or was removed, so this request could not be applied.") from None
-    conn.execute("UPDATE pending_changes SET status = ? WHERE id = ?", ("approved" if approve else "rejected", change_id))
+    conn.execute(
+        "UPDATE pending_changes SET status = ? WHERE id = ?", ("approved" if approve else "rejected", change_id)
+    )
     log_activity(conn, profile_id, ELDER, "approved" if approve else "rejected", row["summary"])
     conn.commit()
     return {"status": "approved" if approve else "rejected"}

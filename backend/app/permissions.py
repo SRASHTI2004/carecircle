@@ -1,4 +1,5 @@
 """Role -> permission matrix and the FastAPI dependencies that enforce it."""
+
 from __future__ import annotations
 
 import sqlite3
@@ -15,8 +16,24 @@ from .security import hash_token
 ELDER, CARETAKER, FAMILY = "elder", "caretaker", "family"
 
 PERMISSIONS: dict[str, frozenset[str]] = {
-    ELDER: frozenset({"view", "edit_care", "log_dose", "comment", "manage_settings", "approve", "use_ai", "manage_contacts"}),
-    CARETAKER: frozenset({"view", "edit_care", "log_dose", "comment", "use_ai", "manage_contacts"}),
+    ELDER: frozenset(
+        {
+            "view",
+            "edit_care",
+            "log_dose",
+            "comment",
+            "manage_settings",
+            "approve",
+            "use_ai",
+            "manage_contacts",
+            "checkin",
+            "manage_passcodes",
+            "edit_emergency",
+        }
+    ),
+    CARETAKER: frozenset(
+        {"view", "edit_care", "log_dose", "comment", "use_ai", "manage_contacts", "checkin", "manage_passcodes"}
+    ),
     FAMILY: frozenset({"view", "comment"}),
 }
 

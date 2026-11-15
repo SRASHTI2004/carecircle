@@ -31,3 +31,8 @@ and open http://localhost:8000 (demo passcodes are on the login page).
 ## Next
 1. Deploy on Render (see top) and put the live URL in README.
 2. Polish: manual a11y pass in a browser, screenshots, try real Gemini key with a sample prescription.
+
+## Pass 2 log
+- 13:07 IST: backend extended (routines, duplicate warning, passcode rotate/revoke, notification prefs, HTML email + retries + test email,
+  emergency card, wellbeing check-ins with alerts, trend + per-medicine adherence, pagination, AI rate limit + cache, headers).
+  95 backend tests, ruff + mypy clean. Next: frontend redesign, a11y test, docs.

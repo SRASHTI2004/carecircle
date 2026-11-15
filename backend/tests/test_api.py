@@ -2,8 +2,14 @@ from datetime import date, timedelta
 
 import pytest
 
-MED = {"name": "Aspirin", "dose": "75 mg", "times": ["08:00", "20:00"], "start_date": date.today().isoformat(),
-       "instructions": "After food", "stock": 20}
+MED = {
+    "name": "Aspirin",
+    "dose": "75 mg",
+    "times": ["08:00", "20:00"],
+    "start_date": date.today().isoformat(),
+    "instructions": "After food",
+    "stock": 20,
+}
 APPT = {"doctor": "Dr. Who", "place": "Clinic", "starts_at": "2099-01-01T10:00", "notes": ""}
 
 
@@ -15,7 +21,7 @@ def test_permission_matrix_for_edits(client, elder, caretaker, family):
     assert client.post("/api/medications", json=MED, headers=family).status_code == 403
     assert client.post("/api/appointments", json=APPT, headers=family).status_code == 403
     assert client.post("/api/medications", json=MED, headers=caretaker).status_code == 201
-    assert client.post("/api/medications", json=MED, headers=elder).status_code == 201
+    assert client.post("/api/medications", json={**MED, "name": "Ibuprofen"}, headers=elder).status_code == 201
     assert client.post("/api/appointments", json=APPT, headers=caretaker).status_code == 201
 
 
@@ -67,14 +73,19 @@ def test_today_view_and_dose_logging(client, elder, caretaker):
     d = doses[0]
     body = {"medication_id": d["medication_id"], "scheduled_at": d["scheduled_at"], "action": "taken"}
     assert client.post("/api/doses", json=body, headers=caretaker).status_code == 200
-    after = {(x["medication_id"], x["scheduled_at"]): x for x in client.get("/api/doses/today", headers=elder).json()["doses"]}
+    after = {
+        (x["medication_id"], x["scheduled_at"]): x
+        for x in client.get("/api/doses/today", headers=elder).json()["doses"]
+    }
     got = after[(d["medication_id"], d["scheduled_at"])]
     assert got["status"].startswith("taken") and got["logged_by"] == "caretaker"
 
 
 def test_dose_logging_updates_stock_once(client, elder):
     med = client.get("/api/medications", headers=elder).json()[0]
-    slot = next(d for d in client.get("/api/doses/today", headers=elder).json()["doses"] if d["medication_id"] == med["id"])
+    slot = next(
+        d for d in client.get("/api/doses/today", headers=elder).json()["doses"] if d["medication_id"] == med["id"]
+    )
     body = {"medication_id": med["id"], "scheduled_at": slot["scheduled_at"], "action": "taken"}
     already = slot["status"].startswith("taken")
     client.post("/api/doses", json=body, headers=elder)
@@ -148,8 +159,19 @@ def test_approval_reject(client, elder, caretaker):
     assert client.post(f"/api/pending/{pid}/approve", headers=elder).status_code == 404
 
 
-@pytest.mark.parametrize("path", ["/api/me", "/api/medications", "/api/appointments", "/api/doses/today",
-                                  "/api/activity", "/api/outbox", "/api/pending", "/api/contacts"])
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/api/me",
+        "/api/medications",
+        "/api/appointments",
+        "/api/doses/today",
+        "/api/activity",
+        "/api/outbox",
+        "/api/pending",
+        "/api/contacts",
+    ],
+)
 def test_every_endpoint_requires_auth(client, path):
     assert client.get(path).status_code == 401
 

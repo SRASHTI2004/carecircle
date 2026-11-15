@@ -65,7 +65,9 @@ def test_logout_invalidates_token(client):
 
 
 def test_create_profile_returns_working_passcodes(client):
-    r = client.post("/api/profiles", json={"name": "Grandpa Joe", "contacts": [{"name": "A", "email": "a@b.co", "role": "family"}]})
+    r = client.post(
+        "/api/profiles", json={"name": "Grandpa Joe", "contacts": [{"name": "A", "email": "a@b.co", "role": "family"}]}
+    )
     assert r.status_code == 201
     codes = r.json()["passcodes"]
     assert set(codes) == {"elder", "caretaker", "family"}

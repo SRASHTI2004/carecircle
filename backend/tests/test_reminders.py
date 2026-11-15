@@ -11,8 +11,11 @@ def ist(y, mo, d, h, mi):
 
 
 def fresh_profile(conn, tz="Asia/Kolkata"):
-    contacts = [ContactIn(name="E", email="elder@x.co", role="elder"), ContactIn(name="C", email="care@x.co", role="caretaker"),
-                ContactIn(name="F", email="fam@x.co", role="family")]
+    contacts = [
+        ContactIn(name="E", email="elder@x.co", role="elder"),
+        ContactIn(name="C", email="care@x.co", role="caretaker"),
+        ContactIn(name="F", email="fam@x.co", role="family"),
+    ]
     pid, _ = create_profile(conn, "Test Elder", tz, contacts)
     return pid
 
@@ -58,8 +61,10 @@ def test_missed_dose_after_30_minutes_notifies_caretaker_and_family(conn):
 def test_taken_dose_is_not_reported_missed(conn):
     pid = fresh_profile(conn)
     mid = add_med(conn, pid)
-    conn.execute("INSERT INTO dose_logs (medication_id, scheduled_at, status, logged_at, logged_by) VALUES (?,?,?,?,?)",
-                 (mid, "2025-03-03T08:00", "taken", "2025-03-03T08:05", "elder"))
+    conn.execute(
+        "INSERT INTO dose_logs (medication_id, scheduled_at, status, logged_at, logged_by) VALUES (?,?,?,?,?)",
+        (mid, "2025-03-03T08:00", "taken", "2025-03-03T08:05", "elder"),
+    )
     run_reminders(conn, ist(2025, 3, 3, 9, 0))
     assert emails(conn, pid, "Missed") == []
 
@@ -73,8 +78,10 @@ def test_stale_missed_doses_are_not_sent_after_long_downtime(conn):
 
 def test_appointment_windows(conn):
     pid = fresh_profile(conn)
-    conn.execute("INSERT INTO appointments (profile_id, doctor, place, starts_at) VALUES (?,?,?,?)",
-                 (pid, "Dr. A", "Clinic", "2025-03-05T15:00"))
+    conn.execute(
+        "INSERT INTO appointments (profile_id, doctor, place, starts_at) VALUES (?,?,?,?)",
+        (pid, "Dr. A", "Clinic", "2025-03-05T15:00"),
+    )
     run_reminders(conn, ist(2025, 3, 4, 10, 0))  # more than a day before
     assert emails(conn, pid, "Appointment") == []
     run_reminders(conn, ist(2025, 3, 4, 15, 0))  # one day before
@@ -119,7 +126,7 @@ def test_run_endpoint_requires_secret_token(client):
     assert client.post("/api/reminders/run").status_code == 401
     assert client.post("/api/reminders/run", headers={"X-Reminder-Token": "wrong"}).status_code == 401
     r = client.post("/api/reminders/run", headers={"X-Reminder-Token": "test-reminder-token"})
-    assert r.status_code == 200 and set(r.json()["sent"]) == {"doses", "appointments", "low_stock"}
+    assert r.status_code == 200 and set(r.json()["sent"]) == {"doses", "appointments", "low_stock", "retried"}
 
 
 def test_run_endpoint_disabled_without_configured_token(client, monkeypatch):

@@ -1,4 +1,5 @@
 """FastAPI application: JSON API under /api plus the built React app served as static files."""
+
 from __future__ import annotations
 
 import asyncio
@@ -7,16 +8,18 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from .config import ROOT, get_settings
 from .db import connect, init_db
-from .routers import core, reminders
+from .routers import ai, core, extras, reminders
 from .services.reminders import run_reminders
 from .services.seed import seed_demo
 
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
 log = logging.getLogger("carecircle")
 DIST = ROOT / "frontend" / "dist"
 
@@ -70,11 +73,18 @@ def create_app() -> FastAPI:
         response: Response = await call_next(request)
         response.headers.setdefault("Content-Security-Policy", CSP)
         response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        response.headers.setdefault("X-Frame-Options", "DENY")
         response.headers.setdefault("Referrer-Policy", "no-referrer")
         response.headers.setdefault("Permissions-Policy", "camera=(self), microphone=()")
         if request.url.path.startswith("/api"):
             response.headers.setdefault("Cache-Control", "no-store")
         return response
+
+    @app.exception_handler(RequestValidationError)
+    async def validation_error(_: Request, exc: RequestValidationError) -> JSONResponse:
+        """One readable message string, like every other error response ({"detail": "..."})."""
+        parts = [f"{'.'.join(str(p) for p in e['loc'][1:]) or 'request'}: {e['msg']}" for e in exc.errors()]
+        return JSONResponse(status_code=422, content={"detail": "; ".join(parts)})
 
     @app.get("/api/health")
     def health() -> dict[str, str]:
@@ -82,12 +92,8 @@ def create_app() -> FastAPI:
 
     app.include_router(core.router)
     app.include_router(reminders.router)
-    try:
-        from .routers import ai
-
-        app.include_router(ai.router)
-    except ImportError:  # AI router is optional
-        pass
+    app.include_router(extras.router)
+    app.include_router(ai.router)
 
     if DIST.exists():
         app.mount("/assets", StaticFiles(directory=DIST / "assets"), name="assets")

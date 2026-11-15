@@ -1,39 +1,44 @@
 """Auth, profile, medications, doses, appointments, comments, activity, contacts, settings, outbox."""
+
 from __future__ import annotations
 
+import json
 import sqlite3
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 
 from ..clock import fmt_slot, parse_slot, to_local, utcnow
+from ..config import get_settings
 from ..db import get_db
-from ..permissions import ELDER, Session, can, current_session, require
+from ..permissions import Session, can, current_session, require
 from ..schemas import (
+    ALL_NOTIFY,
     AppointmentIn,
     CommentIn,
     ContactIn,
+    ContactNotify,
     DoseAction,
     LoginIn,
     MedicationIn,
     ProfileCreate,
     SettingsIn,
 )
-from ..security import create_limiter
+from ..security import create_limiter, hash_token
 from ..services import adherence, changes, profiles
 
 router = APIRouter(prefix="/api")
 
 
 def _profile(conn: sqlite3.Connection, session: Session) -> sqlite3.Row:
-    row = conn.execute("SELECT * FROM profiles WHERE id = ?", (session.profile_id,)).fetchone()
+    row: sqlite3.Row | None = conn.execute("SELECT * FROM profiles WHERE id = ?", (session.profile_id,)).fetchone()
     if row is None:
         raise HTTPException(404, "Profile not found.")
     return row
 
 
-def _now(conn: sqlite3.Connection, session: Session):
+def _now(conn: sqlite3.Connection, session: Session) -> datetime:
     return to_local(_profile(conn, session)["timezone"])
 
 
@@ -43,15 +48,22 @@ def _client(request: Request) -> str:
 
 # ---------- auth & profile ----------
 
+
 @router.post("/profiles", status_code=201)
 def create_profile(body: ProfileCreate, request: Request, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
     key = _client(request)
     wait = create_limiter.retry_after(key)
     if wait:
-        raise HTTPException(429, "Too many profiles created from this device. Try later.", headers={"Retry-After": str(wait)})
+        raise HTTPException(
+            429, "Too many profiles created from this device. Try later.", headers={"Retry-After": str(wait)}
+        )
     create_limiter.record_failure(key)
     profile_id, passcodes = profiles.create_profile(conn, body.name, body.timezone, body.contacts)
-    return {"profile_id": profile_id, "passcodes": passcodes, "note": "Save these passcodes now; they are shown only once."}
+    return {
+        "profile_id": profile_id,
+        "passcodes": passcodes,
+        "note": "Save these passcodes now; they are shown only once.",
+    }
 
 
 @router.post("/auth/login")
@@ -61,9 +73,9 @@ def login(body: LoginIn, request: Request, conn: sqlite3.Connection = Depends(ge
 
 
 @router.post("/auth/logout", status_code=204)
-def logout(request: Request, conn: sqlite3.Connection = Depends(get_db), _: Session = Depends(current_session)) -> Response:
-    from ..security import hash_token
-
+def logout(
+    request: Request, conn: sqlite3.Connection = Depends(get_db), _: Session = Depends(current_session)
+) -> Response:
     token = request.headers["authorization"][7:].strip()
     conn.execute("DELETE FROM sessions WHERE token_hash = ?", (hash_token(token),))
     conn.commit()
@@ -78,7 +90,12 @@ def me(conn: sqlite3.Connection = Depends(get_db), session: Session = Depends(cu
     ).fetchone()[0]
     return {
         "role": session.role,
-        "profile": {"id": p["id"], "name": p["name"], "timezone": p["timezone"], "require_approval": bool(p["require_approval"])},
+        "profile": {
+            "id": p["id"],
+            "name": p["name"],
+            "timezone": p["timezone"],
+            "require_approval": bool(p["require_approval"]),
+        },
         "pending_count": pending,
         "can_edit": can(session.role, "edit_care"),
     }
@@ -88,9 +105,14 @@ def me(conn: sqlite3.Connection = Depends(get_db), session: Session = Depends(cu
 def update_settings(
     body: SettingsIn, conn: sqlite3.Connection = Depends(get_db), session: Session = Depends(require("manage_settings"))
 ) -> dict[str, bool]:
-    conn.execute("UPDATE profiles SET require_approval = ? WHERE id = ?", (int(body.require_approval), session.profile_id))
+    conn.execute(
+        "UPDATE profiles SET require_approval = ? WHERE id = ?", (int(body.require_approval), session.profile_id)
+    )
     changes.log_activity(
-        conn, session.profile_id, session.role, "settings",
+        conn,
+        session.profile_id,
+        session.role,
+        "settings",
         "now requires elder approval for others' changes" if body.require_approval else "no longer requires approval",
     )
     conn.commit()
@@ -99,27 +121,56 @@ def update_settings(
 
 # ---------- medications ----------
 
+
 def _med_out(row: sqlite3.Row) -> dict[str, Any]:
     import json
 
     return {
-        "id": row["id"], "name": row["name"], "dose": row["dose"], "times": json.loads(row["times"]),
-        "start_date": row["start_date"], "end_date": row["end_date"], "instructions": row["instructions"],
-        "stock": row["stock"], "low_stock_threshold": row["low_stock_threshold"],
+        "id": row["id"],
+        "kind": row["kind"],
+        "name": row["name"],
+        "dose": row["dose"],
+        "times": json.loads(row["times"]),
+        "start_date": row["start_date"],
+        "end_date": row["end_date"],
+        "instructions": row["instructions"],
+        "stock": row["stock"],
+        "low_stock_threshold": row["low_stock_threshold"],
     }
 
 
 @router.get("/medications")
-def list_medications(conn: sqlite3.Connection = Depends(get_db), session: Session = Depends(require("view"))) -> list[dict[str, Any]]:
-    rows = conn.execute("SELECT * FROM medications WHERE profile_id = ? AND archived = 0 ORDER BY name", (session.profile_id,))
+def list_medications(
+    conn: sqlite3.Connection = Depends(get_db), session: Session = Depends(require("view"))
+) -> list[dict[str, Any]]:
+    rows = conn.execute(
+        "SELECT * FROM medications WHERE profile_id = ? AND archived = 0 ORDER BY name", (session.profile_id,)
+    )
     return [_med_out(r) for r in rows]
+
+
+def _check_duplicate(
+    conn: sqlite3.Connection, profile_id: int, body: MedicationIn, allow: bool, exclude: int | None = None
+) -> None:
+    """Warn (409) when the same medicine/routine name already exists; the client may confirm and resend."""
+    twin = changes.find_duplicate(conn, profile_id, body.name, exclude)
+    if twin and not allow:
+        raise HTTPException(
+            409,
+            f"'{twin}' is already on the list. Adding it twice can mean a double dose, so please check with a doctor "
+            "or pharmacist. If you are sure, confirm to add it anyway.",
+        )
 
 
 @router.post("/medications", status_code=201)
 def add_medication(
-    body: MedicationIn, response: Response, conn: sqlite3.Connection = Depends(get_db),
+    body: MedicationIn,
+    response: Response,
+    allow_duplicate: bool = False,
+    conn: sqlite3.Connection = Depends(get_db),
     session: Session = Depends(require("edit_care")),
 ) -> dict[str, Any]:
+    _check_duplicate(conn, session.profile_id, body, allow_duplicate)
     result = changes.submit_change(conn, session, "medication", "create", body.model_dump(mode="json"))
     response.status_code = 201 if result["status"] == "applied" else 202
     return result
@@ -127,20 +178,31 @@ def add_medication(
 
 @router.put("/medications/{med_id}")
 def edit_medication(
-    med_id: int, body: MedicationIn, response: Response, conn: sqlite3.Connection = Depends(get_db),
+    med_id: int,
+    body: MedicationIn,
+    response: Response,
+    allow_duplicate: bool = False,
+    conn: sqlite3.Connection = Depends(get_db),
     session: Session = Depends(require("edit_care")),
 ) -> dict[str, Any]:
-    result = changes.submit_change(conn, session, "medication", "update", {**body.model_dump(mode="json"), "id": med_id})
+    _check_duplicate(conn, session.profile_id, body, allow_duplicate, med_id)
+    result = changes.submit_change(
+        conn, session, "medication", "update", {**body.model_dump(mode="json"), "id": med_id}
+    )
     response.status_code = 200 if result["status"] == "applied" else 202
     return result
 
 
 @router.delete("/medications/{med_id}")
 def delete_medication(
-    med_id: int, response: Response, conn: sqlite3.Connection = Depends(get_db),
+    med_id: int,
+    response: Response,
+    conn: sqlite3.Connection = Depends(get_db),
     session: Session = Depends(require("edit_care")),
 ) -> dict[str, Any]:
-    row = conn.execute("SELECT name FROM medications WHERE id = ? AND profile_id = ? AND archived = 0", (med_id, session.profile_id)).fetchone()
+    row = conn.execute(
+        "SELECT name FROM medications WHERE id = ? AND profile_id = ? AND archived = 0", (med_id, session.profile_id)
+    ).fetchone()
     if row is None:
         raise HTTPException(404, "That medication was not found.")
     result = changes.submit_change(conn, session, "medication", "delete", {"id": med_id, "name": row["name"]})
@@ -150,8 +212,11 @@ def delete_medication(
 
 # ---------- doses & adherence ----------
 
+
 @router.get("/doses/today")
-def doses_today(conn: sqlite3.Connection = Depends(get_db), session: Session = Depends(require("view"))) -> dict[str, Any]:
+def doses_today(
+    conn: sqlite3.Connection = Depends(get_db), session: Session = Depends(require("view"))
+) -> dict[str, Any]:
     now = _now(conn, session)
     doses = adherence.doses_between(conn, session.profile_id, now.date(), now.date(), now)
     return {"now": fmt_slot(now), "doses": doses}
@@ -163,7 +228,8 @@ def log_dose(
 ) -> dict[str, Any]:
     now = _now(conn, session)
     med = conn.execute(
-        "SELECT * FROM medications WHERE id = ? AND profile_id = ? AND archived = 0", (body.medication_id, session.profile_id)
+        "SELECT * FROM medications WHERE id = ? AND profile_id = ? AND archived = 0",
+        (body.medication_id, session.profile_id),
     ).fetchone()
     if med is None:
         raise HTTPException(404, "That medication was not found.")
@@ -187,7 +253,9 @@ def log_dose(
     )
     # Keep the pill count honest when a dose flips between taken and not taken.
     was_taken = bool(existing and existing["status"] == "taken")
-    if body.action == "taken" and not was_taken:
+    if med["kind"] != "medicine":
+        pass  # routines have no stock
+    elif body.action == "taken" and not was_taken:
         conn.execute("UPDATE medications SET stock = MAX(stock - 1, 0) WHERE id = ?", (med["id"],))
     elif body.action != "taken" and was_taken:
         conn.execute("UPDATE medications SET stock = stock + 1 WHERE id = ?", (med["id"],))
@@ -202,6 +270,7 @@ def weekly(conn: sqlite3.Connection = Depends(get_db), session: Session = Depend
 
 
 # ---------- appointments ----------
+
 
 def _appt_out(row: sqlite3.Row) -> dict[str, Any]:
     return {k: row[k] for k in ("id", "doctor", "place", "starts_at", "notes")}
@@ -220,7 +289,9 @@ def list_appointments(
 
 @router.post("/appointments", status_code=201)
 def add_appointment(
-    body: AppointmentIn, response: Response, conn: sqlite3.Connection = Depends(get_db),
+    body: AppointmentIn,
+    response: Response,
+    conn: sqlite3.Connection = Depends(get_db),
     session: Session = Depends(require("edit_care")),
 ) -> dict[str, Any]:
     payload = {**body.model_dump(mode="json"), "starts_at": fmt_slot(body.starts_at)}
@@ -231,7 +302,10 @@ def add_appointment(
 
 @router.put("/appointments/{appt_id}")
 def edit_appointment(
-    appt_id: int, body: AppointmentIn, response: Response, conn: sqlite3.Connection = Depends(get_db),
+    appt_id: int,
+    body: AppointmentIn,
+    response: Response,
+    conn: sqlite3.Connection = Depends(get_db),
     session: Session = Depends(require("edit_care")),
 ) -> dict[str, Any]:
     payload = {**body.model_dump(mode="json"), "starts_at": fmt_slot(body.starts_at), "id": appt_id}
@@ -242,10 +316,14 @@ def edit_appointment(
 
 @router.delete("/appointments/{appt_id}")
 def delete_appointment(
-    appt_id: int, response: Response, conn: sqlite3.Connection = Depends(get_db),
+    appt_id: int,
+    response: Response,
+    conn: sqlite3.Connection = Depends(get_db),
     session: Session = Depends(require("edit_care")),
 ) -> dict[str, Any]:
-    row = conn.execute("SELECT doctor FROM appointments WHERE id = ? AND profile_id = ?", (appt_id, session.profile_id)).fetchone()
+    row = conn.execute(
+        "SELECT doctor FROM appointments WHERE id = ? AND profile_id = ?", (appt_id, session.profile_id)
+    ).fetchone()
     if row is None:
         raise HTTPException(404, "That appointment was not found.")
     result = changes.submit_change(conn, session, "appointment", "delete", {"id": appt_id, "doctor": row["doctor"]})
@@ -255,18 +333,24 @@ def delete_appointment(
 
 # ---------- pending approval, activity, comments, contacts, outbox ----------
 
+
 @router.get("/pending")
-def list_pending(conn: sqlite3.Connection = Depends(get_db), session: Session = Depends(require("view"))) -> list[dict[str, Any]]:
+def list_pending(
+    conn: sqlite3.Connection = Depends(get_db), session: Session = Depends(require("view"))
+) -> list[dict[str, Any]]:
     rows = conn.execute(
         "SELECT id, entity, op, summary, requested_by, created_at FROM pending_changes"
-        " WHERE profile_id = ? AND status = 'pending' ORDER BY id DESC", (session.profile_id,)
+        " WHERE profile_id = ? AND status = 'pending' ORDER BY id DESC",
+        (session.profile_id,),
     )
     return [dict(r) for r in rows]
 
 
 @router.post("/pending/{change_id}/{decision}")
 def decide_pending(
-    change_id: int, decision: str, conn: sqlite3.Connection = Depends(get_db),
+    change_id: int,
+    decision: str,
+    conn: sqlite3.Connection = Depends(get_db),
     session: Session = Depends(require("approve")),
 ) -> dict[str, Any]:
     if decision not in ("approve", "reject"):
@@ -275,18 +359,30 @@ def decide_pending(
 
 
 @router.get("/activity")
-def activity(conn: sqlite3.Connection = Depends(get_db), session: Session = Depends(require("view"))) -> list[dict[str, Any]]:
+def activity(
+    limit: int = Query(30, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    conn: sqlite3.Connection = Depends(get_db),
+    session: Session = Depends(require("view")),
+) -> list[dict[str, Any]]:
     rows = conn.execute(
-        "SELECT actor_role, action, detail, created_at FROM activity_log WHERE profile_id = ? ORDER BY id DESC LIMIT 100",
-        (session.profile_id,),
+        "SELECT actor_role, action, detail, created_at FROM activity_log WHERE profile_id = ?"
+        " ORDER BY id DESC LIMIT ? OFFSET ?",
+        (session.profile_id, limit, offset),
     )
     return [dict(r) for r in rows]
 
 
 @router.get("/comments")
-def list_comments(conn: sqlite3.Connection = Depends(get_db), session: Session = Depends(require("view"))) -> list[dict[str, Any]]:
+def list_comments(
+    limit: int = Query(30, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    conn: sqlite3.Connection = Depends(get_db),
+    session: Session = Depends(require("view")),
+) -> list[dict[str, Any]]:
     rows = conn.execute(
-        "SELECT role, text, created_at FROM comments WHERE profile_id = ? ORDER BY id DESC LIMIT 50", (session.profile_id,)
+        "SELECT role, text, created_at FROM comments WHERE profile_id = ? ORDER BY id DESC LIMIT ? OFFSET ?",
+        (session.profile_id, limit, offset),
     )
     return [dict(r) for r in rows]
 
@@ -305,9 +401,14 @@ def add_comment(
 
 
 @router.get("/contacts")
-def list_contacts(conn: sqlite3.Connection = Depends(get_db), session: Session = Depends(require("manage_contacts"))) -> list[dict[str, Any]]:
-    rows = conn.execute("SELECT id, name, email, role FROM contacts WHERE profile_id = ? ORDER BY role, name", (session.profile_id,))
-    return [dict(r) for r in rows]
+def list_contacts(
+    conn: sqlite3.Connection = Depends(get_db), session: Session = Depends(require("manage_contacts"))
+) -> list[dict[str, Any]]:
+    rows = conn.execute(
+        "SELECT id, name, email, role, notify FROM contacts WHERE profile_id = ? ORDER BY role, name",
+        (session.profile_id,),
+    )
+    return [{**{k: r[k] for k in ("id", "name", "email", "role")}, "notify": json.loads(r["notify"])} for r in rows]
 
 
 @router.post("/contacts", status_code=201)
@@ -315,12 +416,37 @@ def add_contact(
     body: ContactIn, conn: sqlite3.Connection = Depends(get_db), session: Session = Depends(require("manage_contacts"))
 ) -> dict[str, str]:
     conn.execute(
-        "INSERT INTO contacts (profile_id, name, email, role) VALUES (?,?,?,?)",
-        (session.profile_id, body.name, body.email, body.role),
+        "INSERT INTO contacts (profile_id, name, email, role, notify) VALUES (?,?,?,?,?)",
+        (
+            session.profile_id,
+            body.name,
+            body.email,
+            body.role,
+            json.dumps(body.notify if body.notify is not None else ALL_NOTIFY),
+        ),
     )
     changes.log_activity(conn, session.profile_id, session.role, "added", f"reminder contact {body.name}")
     conn.commit()
     return {"status": "ok"}
+
+
+@router.put("/contacts/{contact_id}/notify")
+def set_contact_notify(
+    contact_id: int,
+    body: ContactNotify,
+    conn: sqlite3.Connection = Depends(get_db),
+    session: Session = Depends(require("manage_contacts")),
+) -> dict[str, list[str]]:
+    chosen: list[str] = sorted(set(body.notify))
+    cur = conn.execute(
+        "UPDATE contacts SET notify = ? WHERE id = ? AND profile_id = ?",
+        (json.dumps(chosen), contact_id, session.profile_id),
+    )
+    if cur.rowcount == 0:
+        raise HTTPException(404, "That contact was not found.")
+    changes.log_activity(conn, session.profile_id, session.role, "updated", "a member's email preferences")
+    conn.commit()
+    return {"notify": chosen}
 
 
 @router.delete("/contacts/{contact_id}", status_code=204)
@@ -333,14 +459,18 @@ def delete_contact(
 
 
 @router.get("/outbox")
-def outbox(conn: sqlite3.Connection = Depends(get_db), session: Session = Depends(require("view"))) -> dict[str, Any]:
-    from ..config import get_settings
-
+def outbox(
+    limit: int = Query(30, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    conn: sqlite3.Connection = Depends(get_db),
+    session: Session = Depends(require("view")),
+) -> dict[str, Any]:
     rows = conn.execute(
-        "SELECT id, to_email, subject, body, delivered, created_at FROM outbox WHERE profile_id = ? ORDER BY id DESC LIMIT 100",
-        (session.profile_id,),
+        "SELECT id, to_email, subject, body, delivered, error, created_at FROM outbox WHERE profile_id = ?"
+        " ORDER BY id DESC LIMIT ? OFFSET ?",
+        (session.profile_id, limit, offset),
     )
     return {"smtp_configured": get_settings().smtp_configured, "emails": [dict(r) for r in rows]}
 
 
-__all__ = ["router", "ELDER"]
+__all__ = ["router"]

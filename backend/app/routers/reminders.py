@@ -1,4 +1,5 @@
 """Protected endpoint so an external cron can trigger reminders while a free server sleeps."""
+
 from __future__ import annotations
 
 import hmac

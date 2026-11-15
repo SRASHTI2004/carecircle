@@ -14,7 +14,9 @@ class FakeResp:
 
     def raise_for_status(self):
         if self.status >= 400:
-            raise httpx.HTTPStatusError("boom", request=httpx.Request("POST", "http://x"), response=httpx.Response(self.status))
+            raise httpx.HTTPStatusError(
+                "boom", request=httpx.Request("POST", "http://x"), response=httpx.Response(self.status)
+            )
 
     def json(self):
         return {"candidates": [{"content": {"parts": [{"text": self.payload}]}}]}
@@ -40,7 +42,9 @@ def test_prescription_without_key_gives_clear_message(client, elder):
 
 
 def test_prescription_valid_ai_output_becomes_drafts(client, elder, with_key, monkeypatch):
-    payload = json.dumps({"medicines": [{"name": "Metformin", "dose": "500 mg", "times_per_day": 2, "instructions": "after food"}]})
+    payload = json.dumps(
+        {"medicines": [{"name": "Metformin", "dose": "500 mg", "times_per_day": 2, "instructions": "after food"}]}
+    )
     monkeypatch.setattr(httpx, "post", lambda *a, **k: FakeResp(payload))
     body = upload(client, elder).json()
     assert body["ok"] and body["drafts"][0]["times"] == ["08:00", "20:00"]
@@ -54,7 +58,9 @@ def test_prescription_does_not_save_anything(client, elder, with_key, monkeypatc
     assert len(client.get("/api/medications", headers=elder).json()) == before
 
 
-@pytest.mark.parametrize("payload", ["not json", json.dumps({"medicines": [{"name": "", "times_per_day": 99}]}), json.dumps({"wrong": 1})])
+@pytest.mark.parametrize(
+    "payload", ["not json", json.dumps({"medicines": [{"name": "", "times_per_day": 99}]}), json.dumps({"wrong": 1})]
+)
 def test_prescription_schema_violations_are_rejected(client, elder, with_key, monkeypatch, payload):
     monkeypatch.setattr(httpx, "post", lambda *a, **k: FakeResp(payload))
     body = upload(client, elder).json()

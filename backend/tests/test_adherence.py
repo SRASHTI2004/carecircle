@@ -1,7 +1,15 @@
 from datetime import datetime, timedelta
 
 from app.services.adherence import (
-    DUE, MISSED, SKIPPED, TAKEN_LATE, TAKEN_ON_TIME, UPCOMING, adherence_percent, classify, slots_for,
+    DUE,
+    MISSED,
+    SKIPPED,
+    TAKEN_LATE,
+    TAKEN_ON_TIME,
+    UPCOMING,
+    adherence_percent,
+    classify,
+    slots_for,
 )
 
 S = datetime(2025, 1, 10, 8, 0)

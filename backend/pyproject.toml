@@ -1,0 +1,18 @@
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+extend-exclude = ["tests/__pycache__"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "S", "SIM", "C4", "RET"]
+ignore = ["S608", "B008", "RET504", "E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101", "S105", "S106", "S108", "E501", "B011"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+plugins = []
+exclude = ["tests/"]
+ignore_missing_imports = true

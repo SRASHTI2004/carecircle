@@ -1,4 +1,5 @@
 """Runtime configuration, read from environment variables (and a local .env)."""
+
 from __future__ import annotations
 
 import os
@@ -17,6 +18,8 @@ class Settings:
     cors_origins: list[str]
     bcrypt_rounds: int
     session_hours: int
+    smtp_use_tls: bool
+    app_url: str
     reminder_token: str
     disable_scheduler: bool
     smtp_host: str
@@ -40,7 +43,9 @@ def get_settings() -> Settings:
         database_path=env("DATABASE_PATH", str(ROOT / "carecircle.db")),
         cors_origins=[o.strip() for o in env("CORS_ORIGINS", "http://localhost:5173").split(",") if o.strip()],
         bcrypt_rounds=int(env("BCRYPT_ROUNDS", "12")),
-        session_hours=int(env("SESSION_HOURS", "24")),
+        session_hours=int(env("SESSION_TTL", "24")),
+        smtp_use_tls=env("SMTP_USE_TLS", "1") != "0",
+        app_url=env("APP_URL", "https://carecircle-d9ia.onrender.com"),
         reminder_token=env("REMINDER_TOKEN", ""),
         disable_scheduler=env("DISABLE_SCHEDULER", "") == "1",
         smtp_host=env("SMTP_HOST", ""),

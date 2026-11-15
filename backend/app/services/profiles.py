@@ -1,12 +1,15 @@
 """Profile creation and passcode login."""
+
 from __future__ import annotations
 
+import json
 import sqlite3
 
 from fastapi import HTTPException
 
 from ..clock import utcnow, valid_timezone
 from ..permissions import CARETAKER, ELDER, FAMILY
+from ..schemas import ALL_NOTIFY, ContactIn
 from ..security import (
     client_limiter,
     hash_passcode,
@@ -17,7 +20,6 @@ from ..security import (
     session_expiry,
     verify_passcode,
 )
-from ..schemas import ContactIn
 from .changes import log_activity
 
 ROLES = (ELDER, CARETAKER, FAMILY)
@@ -49,7 +51,8 @@ def create_profile(
         )
     for c in contacts:
         conn.execute(
-            "INSERT INTO contacts (profile_id, name, email, role) VALUES (?,?,?,?)", (profile_id, c.name, c.email, c.role)
+            "INSERT INTO contacts (profile_id, name, email, role, notify) VALUES (?,?,?,?,?)",
+            (profile_id, c.name, c.email, c.role, json.dumps(c.notify if c.notify is not None else ALL_NOTIFY)),
         )
     log_activity(conn, profile_id, ELDER, "created", f"care profile for {name}")
     conn.commit()
@@ -62,7 +65,9 @@ def login(conn: sqlite3.Connection, passcode: str, client: str) -> tuple[str, in
     client_key, profile_key = f"{client}|{code}", code
     wait = max(client_limiter.retry_after(client_key), profile_limiter.retry_after(profile_key))
     if wait:
-        raise HTTPException(429, f"Too many wrong passcodes. Try again in {wait} seconds.", headers={"Retry-After": str(wait)})
+        raise HTTPException(
+            429, f"Too many wrong passcodes. Try again in {wait} seconds.", headers={"Retry-After": str(wait)}
+        )
 
     profile = conn.execute("SELECT id FROM profiles WHERE code = ?", (code,)).fetchone()
     role: str | None = None
@@ -88,4 +93,26 @@ def login(conn: sqlite3.Connection, passcode: str, client: str) -> tuple[str, in
     return token, int(profile["id"]), role
 
 
-__all__ = ["create_profile", "login", "ROLES"]
+def rotate_passcode(conn: sqlite3.Connection, profile_id: int, role: str, actor_role: str) -> str:
+    """Replace a role's passcode, sign out that role everywhere, and return the new plaintext (shown once)."""
+    code = conn.execute("SELECT code FROM profiles WHERE id = ?", (profile_id,)).fetchone()["code"]
+    passcode = new_passcode(code)
+    conn.execute(
+        "INSERT INTO passcodes (profile_id, role, hash) VALUES (?,?,?) ON CONFLICT(profile_id, role) DO UPDATE SET hash = excluded.hash",
+        (profile_id, role, hash_passcode(passcode)),
+    )
+    conn.execute("DELETE FROM sessions WHERE profile_id = ? AND role = ?", (profile_id, role))
+    log_activity(conn, profile_id, actor_role, "rotated", f"{role} passcode")
+    conn.commit()
+    return passcode
+
+
+def revoke_passcode(conn: sqlite3.Connection, profile_id: int, role: str, actor_role: str) -> None:
+    """Disable a role's passcode and end its sessions. It can be re-enabled by rotating."""
+    conn.execute("DELETE FROM passcodes WHERE profile_id = ? AND role = ?", (profile_id, role))
+    conn.execute("DELETE FROM sessions WHERE profile_id = ? AND role = ?", (profile_id, role))
+    log_activity(conn, profile_id, actor_role, "revoked", f"{role} passcode")
+    conn.commit()
+
+
+__all__ = ["create_profile", "login", "ROLES", "rotate_passcode", "revoke_passcode"]

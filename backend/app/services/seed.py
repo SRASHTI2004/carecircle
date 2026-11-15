@@ -1,4 +1,5 @@
 """Demo profile with sample medicines, appointments and two weeks of adherence history."""
+
 from __future__ import annotations
 
 import json
@@ -37,13 +38,16 @@ def seed_demo(conn: sqlite3.Connection) -> bool:
         ("Amlodipine", "5 mg", ["09:00"], "Morning, with water", 4, 5),  # low stock: shows the reminder
         ("Vitamin D3", "1000 IU", ["13:00"], "With lunch", 30, 5),
         ("Atorvastatin", "10 mg", ["21:30"], "Before bed", 25, 5),
+        ("Blood pressure check", "", ["07:30"], "Sit quietly for 5 minutes first; note the reading", 0, 0),
+        ("Evening walk", "", ["17:30"], "20 minutes, gentle pace", 0, 0),
+        ("Drink a glass of water", "", ["11:00", "15:00"], "", 0, 0),
     ]
-    rng = random.Random(7)
+    rng = random.Random(7)  # noqa: S311 - deterministic demo data, not security
     for name, dose, times, instr, stock, threshold in meds:
         cur = conn.execute(
-            "INSERT INTO medications (profile_id, name, dose, times, start_date, instructions, stock, low_stock_threshold)"
-            " VALUES (?,?,?,?,?,?,?,?)",
-            (pid, name, dose, json.dumps(times), start, instr, stock, threshold),
+            "INSERT INTO medications (profile_id, name, dose, times, start_date, instructions, stock, low_stock_threshold, kind)"
+            " VALUES (?,?,?,?,?,?,?,?,?)",
+            (pid, name, dose, json.dumps(times), start, instr, stock, threshold, "medicine" if dose else "routine"),
         )
         med_id = cur.lastrowid
         row = {"times": json.dumps(times), "start_date": start, "end_date": None}
@@ -64,7 +68,12 @@ def seed_demo(conn: sqlite3.Connection) -> bool:
                 (med_id, fmt_slot(slot), status, fmt_slot(logged), "elder"),
             )
     appts = [
-        ("Dr. Rao (Cardiologist)", "Apollo Clinic, Indiranagar", now + timedelta(days=1, hours=2), "Bring recent BP readings."),
+        (
+            "Dr. Rao (Cardiologist)",
+            "Apollo Clinic, Indiranagar",
+            now + timedelta(days=1, hours=2),
+            "Bring recent BP readings.",
+        ),
         ("Dr. Mehta (GP)", "City Health Centre", now + timedelta(days=8), "Routine check-up and blood sugar test."),
         ("Dr. Iyer (Eye specialist)", "Vision Care", now - timedelta(days=12), "Annual eye test."),
     ]
@@ -73,9 +82,33 @@ def seed_demo(conn: sqlite3.Connection) -> bool:
             "INSERT INTO appointments (profile_id, doctor, place, starts_at, notes) VALUES (?,?,?,?,?)",
             (pid, doctor, place, fmt_slot(when), notes),
         )
-    for role, text in [("family", "Mom, remember your walk after lunch today!"), ("caretaker", "BP was 128/82 this morning.")]:
+    for role, text in [
+        ("family", "Mom, remember your walk after lunch today!"),
+        ("caretaker", "BP was 128/82 this morning."),
+    ]:
         conn.execute(
-            "INSERT INTO comments (profile_id, role, text, created_at) VALUES (?,?,?,?)", (pid, role, text, utcnow().isoformat())
+            "INSERT INTO comments (profile_id, role, text, created_at) VALUES (?,?,?,?)",
+            (pid, role, text, utcnow().isoformat()),
+        )
+    conn.execute(
+        "INSERT INTO emergency_cards (profile_id, blood_group, allergies, conditions, doctor_name, doctor_phone,"
+        " emergency_contacts, notes, updated_at) VALUES (?,?,?,?,?,?,?,?,?)",
+        (
+            pid,
+            "B+",
+            "Penicillin",
+            "Type 2 diabetes, high blood pressure",
+            "Dr. Mehta (GP)",
+            "+91 80 5550 0100",
+            "Priya (caretaker) +91 98450 00001; Arjun (son) +91 98450 00002",
+            "Wears reading glasses. Prefers Hindi or English.",
+            utcnow().isoformat(),
+        ),
+    )
+    for days_ago, mood, note in [(3, "good", ""), (2, "okay", "A bit tired"), (1, "good", "")]:
+        conn.execute(
+            "INSERT INTO checkins (profile_id, mood, note, logged_by, created_at) VALUES (?,?,?,?,?)",
+            (pid, mood, note, "elder", (utcnow() - timedelta(days=days_ago)).isoformat()),
         )
     log_activity(conn, pid, "caretaker", "create", "medication 'Atorvastatin'")
     log_activity(conn, pid, "elder", "taken", "Metformin at 08:00")

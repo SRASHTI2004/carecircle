@@ -1,4 +1,5 @@
 """SQLite access. All queries elsewhere use parameter binding (never string formatting)."""
+
 from __future__ import annotations
 
 import sqlite3
@@ -32,7 +33,8 @@ CREATE TABLE IF NOT EXISTS contacts (
     profile_id INTEGER NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
     email TEXT NOT NULL,
-    role TEXT NOT NULL
+    role TEXT NOT NULL,
+    notify TEXT NOT NULL DEFAULT '["dose_upcoming","dose_missed","routine","appointment","low_stock","wellbeing"]'
 );
 CREATE TABLE IF NOT EXISTS medications (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -45,7 +47,8 @@ CREATE TABLE IF NOT EXISTS medications (
     instructions TEXT NOT NULL DEFAULT '',
     stock INTEGER NOT NULL DEFAULT 0,
     low_stock_threshold INTEGER NOT NULL DEFAULT 5,
-    archived INTEGER NOT NULL DEFAULT 0
+    archived INTEGER NOT NULL DEFAULT 0,
+    kind TEXT NOT NULL DEFAULT 'medicine'
 );
 CREATE TABLE IF NOT EXISTS dose_logs (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -102,12 +105,59 @@ CREATE TABLE IF NOT EXISTS outbox (
     body TEXT NOT NULL,
     delivered INTEGER NOT NULL DEFAULT 0,
     error TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL,
+    html TEXT NOT NULL DEFAULT '',
+    attempts INTEGER NOT NULL DEFAULT 0,
+    last_attempt_at TEXT
+);
+CREATE TABLE IF NOT EXISTS emergency_cards (
+    profile_id INTEGER PRIMARY KEY REFERENCES profiles(id) ON DELETE CASCADE,
+    blood_group TEXT NOT NULL DEFAULT '',
+    allergies TEXT NOT NULL DEFAULT '',
+    conditions TEXT NOT NULL DEFAULT '',
+    doctor_name TEXT NOT NULL DEFAULT '',
+    doctor_phone TEXT NOT NULL DEFAULT '',
+    emergency_contacts TEXT NOT NULL DEFAULT '',
+    notes TEXT NOT NULL DEFAULT '',
+    updated_at TEXT NOT NULL DEFAULT ''
+);
+CREATE TABLE IF NOT EXISTS checkins (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    profile_id INTEGER NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+    mood TEXT NOT NULL,
+    note TEXT NOT NULL DEFAULT '',
+    logged_by TEXT NOT NULL,
+    created_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS ai_cache (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
     created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_meds_profile ON medications(profile_id);
 CREATE INDEX IF NOT EXISTS idx_appts_profile ON appointments(profile_id, starts_at);
 CREATE INDEX IF NOT EXISTS idx_activity_profile ON activity_log(profile_id, id);
+CREATE INDEX IF NOT EXISTS idx_outbox_profile ON outbox(profile_id, id);
+CREATE INDEX IF NOT EXISTS idx_outbox_retry ON outbox(delivered, attempts);
+CREATE INDEX IF NOT EXISTS idx_pending_profile ON pending_changes(profile_id, status);
+CREATE INDEX IF NOT EXISTS idx_sessions_expiry ON sessions(expires_at);
+CREATE INDEX IF NOT EXISTS idx_checkins_profile ON checkins(profile_id, id);
+CREATE INDEX IF NOT EXISTS idx_comments_profile ON comments(profile_id, id);
+CREATE INDEX IF NOT EXISTS idx_contacts_profile ON contacts(profile_id, role);
 """
+
+# Columns added after the first release; applied to databases created by older versions.
+MIGRATIONS = [
+    ("medications", "kind", "TEXT NOT NULL DEFAULT 'medicine'"),
+    (
+        "contacts",
+        "notify",
+        'TEXT NOT NULL DEFAULT \'["dose_upcoming","dose_missed","routine","appointment","low_stock","wellbeing"]\'',
+    ),
+    ("outbox", "html", "TEXT NOT NULL DEFAULT ''"),
+    ("outbox", "attempts", "INTEGER NOT NULL DEFAULT 0"),
+    ("outbox", "last_attempt_at", "TEXT"),
+]
 
 
 def connect() -> sqlite3.Connection:
@@ -121,6 +171,10 @@ def init_db() -> None:
     conn = connect()
     try:
         conn.executescript(SCHEMA)
+        for table, column, ddl in MIGRATIONS:
+            cols = {row["name"] for row in conn.execute(f"PRAGMA table_info({table})")}
+            if column not in cols:
+                conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {ddl}")
         conn.commit()
     finally:
         conn.close()

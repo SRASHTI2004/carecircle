@@ -1,4 +1,5 @@
 """Passcode hashing, session tokens and login rate limiting."""
+
 from __future__ import annotations
 
 import hashlib
@@ -92,3 +93,5 @@ class RateLimiter:
 client_limiter = RateLimiter(max_attempts=5, window_seconds=15 * 60)
 profile_limiter = RateLimiter(max_attempts=20, window_seconds=15 * 60)
 create_limiter = RateLimiter(max_attempts=10, window_seconds=60 * 60)
+ai_limiter = RateLimiter(max_attempts=10, window_seconds=60 * 60)
+email_limiter = RateLimiter(max_attempts=5, window_seconds=60 * 60)
