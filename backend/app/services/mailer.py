@@ -26,6 +26,14 @@ RETRY_WINDOW = timedelta(hours=3)
 FOOTER = "CareCircle sends reminders only. It is not medical advice; ask a doctor or pharmacist about any concern."
 
 _sleep = time.sleep  # patched in tests
+DEMO_DOMAINS = ("example.com", "example.org", "example.net")
+DEMO_SUFFIXES = (".invalid", ".test", ".example", ".localhost")
+
+
+def is_demo_address(email: str) -> bool:
+    """Reserved/documentation domains (used by the demo profile) are never sent to a real mail server."""
+    domain = email.rsplit("@", 1)[-1].lower()
+    return domain in DEMO_DOMAINS or domain.endswith(DEMO_SUFFIXES)
 
 
 def render_email(elder_name: str, heading: str, message: str, action: str = "Open CareCircle") -> tuple[str, str]:
@@ -75,7 +83,7 @@ def _smtp_send(to_email: str, subject: str, text: str, page: str) -> None:
 def _attempt(conn: sqlite3.Connection, row_id: int, tries: int) -> bool:
     """Try to deliver one outbox row up to `tries` times with backoff; record the outcome."""
     row = conn.execute("SELECT * FROM outbox WHERE id = ?", (row_id,)).fetchone()
-    if row is None or not get_settings().smtp_configured:
+    if row is None or not get_settings().smtp_configured or is_demo_address(row["to_email"]):
         return False
     error = ""
     for attempt in range(tries):

@@ -277,21 +277,19 @@ def test_retry_gives_up_after_max_attempts(conn, smtp):
 
 
 def test_test_email_endpoint_demo_mode(client, elder):
-    r = client.post("/api/settings/test-email", json={"email": "judge@example.com"}, headers=elder).json()
+    r = client.post("/api/settings/test-email", json={"email": "judge@gmail.com"}, headers=elder).json()
     assert r["delivered"] is False and r["smtp_configured"] is False and "demo outbox" in r["message"]
     box = client.get("/api/outbox", headers=elder).json()["emails"]
-    assert box[0]["subject"] == "CareCircle test email" and box[0]["to_email"] == "judge@example.com"
+    assert box[0]["subject"] == "CareCircle test email" and box[0]["to_email"] == "judge@gmail.com"
 
 
 def test_test_email_endpoint_real_and_validated_and_limited(client, elder, caretaker, smtp):
-    r = client.post("/api/settings/test-email", json={"email": "judge@example.com"}, headers=caretaker).json()
-    assert r["delivered"] is True and "judge@example.com" in r["message"]
+    r = client.post("/api/settings/test-email", json={"email": "judge@gmail.com"}, headers=caretaker).json()
+    assert r["delivered"] is True and "judge@gmail.com" in r["message"]
     assert client.post("/api/settings/test-email", json={"email": "nope"}, headers=elder).status_code == 422
     for _ in range(4):
-        client.post("/api/settings/test-email", json={"email": "judge@example.com"}, headers=elder)
-    assert (
-        client.post("/api/settings/test-email", json={"email": "judge@example.com"}, headers=elder).status_code == 429
-    )
+        client.post("/api/settings/test-email", json={"email": "judge@gmail.com"}, headers=elder)
+    assert client.post("/api/settings/test-email", json={"email": "judge@gmail.com"}, headers=elder).status_code == 429
 
 
 def test_failed_delivery_does_not_crash_reminder_run(conn, smtp):
@@ -428,3 +426,12 @@ def test_weekly_summary_is_cached(client, family, monkeypatch):
     for _ in range(3):
         assert client.get("/api/ai/weekly-summary", headers=family).json()["summary"] == "Great week."
     assert len(calls) == 1
+
+
+def test_demo_addresses_are_never_sent_to_a_real_server(conn, smtp):
+    pid = fresh_profile(conn)
+    assert mailer.is_demo_address("a@example.com") and mailer.is_demo_address("a@x.invalid")
+    assert not mailer.is_demo_address("someone@gmail.com")
+    assert mailer.send_email(conn, pid, "caretaker@example.com", "Hi", "plain") is False
+    assert smtp.calls == [] and conn.execute("SELECT delivered, error FROM outbox").fetchone()["error"] == ""
+    assert mailer.send_email(conn, pid, "real@gmail.com", "Hi", "plain") is True

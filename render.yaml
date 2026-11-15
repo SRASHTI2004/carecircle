@@ -7,9 +7,24 @@ services:
     envVars:
       - key: REMINDER_TOKEN
         generateValue: true
+      - key: APP_URL
+        value: https://carecircle-d9ia.onrender.com
       - key: CORS_ORIGINS
-        value: https://carecircle.onrender.com
+        value: https://carecircle-d9ia.onrender.com
       - key: APP_TIMEZONE
         value: Asia/Kolkata
-      # Optional - set these in the Render dashboard (never commit them):
-      # GEMINI_API_KEY, SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, FROM_EMAIL
+      # Secrets: set these in the Render dashboard (sync: false keeps them out of git).
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      - key: FROM_EMAIL
+        sync: false
+      - key: SMTP_USE_TLS
+        value: "1"
