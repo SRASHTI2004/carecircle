@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { api } from "../api";
 import type { Dose } from "../types";
-import { formatTime, isTaken, Notify, STATUS_LABEL } from "../util";
+import { formatTime, isTaken, Notify } from "../util";
+import { StatusBadge } from "./StatusBadge";
 
 interface Props {
   doses: Dose[];
@@ -19,7 +20,7 @@ export function DoseList({ doses, canLog, large, notify, onChanged }: Props) {
     setBusy(key);
     try {
       await api.logDose(d.medication_id, d.scheduled_at, action);
-      notify(`${d.name} marked as ${action === "taken" ? "taken" : "skipped"}.`);
+      notify(`${d.name} marked as ${action === "taken" ? (d.kind === "routine" ? "done" : "taken") : "skipped"}.`);
       onChanged();
     } catch (e) {
       notify(e instanceof Error ? e.message : "Could not save.", "error");
@@ -40,8 +41,9 @@ export function DoseList({ doses, canLog, large, notify, onChanged }: Props) {
             <div className="dose-time">{formatTime(d.scheduled_at)}</div>
             <div className="dose-body">
               <strong>{d.name}</strong> <span>{d.dose}</span>
+              {d.kind === "routine" && <span className="tag">Routine</span>}
               {d.instructions && <div className="muted">{d.instructions}</div>}
-              <span className={`badge badge-${d.status}`}>{STATUS_LABEL[d.status]}</span>
+              <StatusBadge status={d.status} />
               {d.logged_by && done && <span className="muted"> (by {d.logged_by})</span>}
             </div>
             {canLog && (
@@ -50,9 +52,9 @@ export function DoseList({ doses, canLog, large, notify, onChanged }: Props) {
                   className="btn btn-primary"
                   disabled={busy === key || isTaken(d.status)}
                   onClick={() => void act(d, "taken")}
-                  aria-label={`Mark ${d.name} at ${formatTime(d.scheduled_at)} as taken`}
+                  aria-label={`Mark ${d.name} at ${formatTime(d.scheduled_at)} as ${d.kind === "routine" ? "done" : "taken"}`}
                 >
-                  Taken
+                  {d.kind === "routine" ? "Done" : "Taken"}
                 </button>
                 <button
                   className="btn btn-secondary"

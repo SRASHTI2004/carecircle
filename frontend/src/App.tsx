@@ -3,6 +3,7 @@ import { api, tokenStore } from "./api";
 import { AppointmentsTab } from "./components/AppointmentsTab";
 import { CareTab } from "./components/CareTab";
 import { ElderMode } from "./components/ElderMode";
+import { EmergencyTab } from "./components/EmergencyTab";
 import { Login } from "./components/Login";
 import { MedicationsTab } from "./components/MedicationsTab";
 import { OutboxTab } from "./components/OutboxTab";
@@ -12,12 +13,13 @@ import { TodayTab } from "./components/TodayTab";
 import type { Me, Role } from "./types";
 import { DISCLAIMER, Notify, ROLE_LABEL } from "./util";
 
-type Tab = "today" | "meds" | "appts" | "care" | "inbox" | "settings";
+type Tab = "today" | "meds" | "appts" | "care" | "emergency" | "inbox" | "settings";
 const TABS: { id: Tab; label: string }[] = [
   { id: "today", label: "Today" },
-  { id: "meds", label: "Medications" },
+  { id: "meds", label: "Medicines & routines" },
   { id: "appts", label: "Appointments" },
   { id: "care", label: "Care circle" },
+  { id: "emergency", label: "Emergency card" },
   { id: "inbox", label: "Email reminders" },
   { id: "settings", label: "Settings" },
 ];
@@ -74,16 +76,39 @@ export function App() {
   }
 
   const toastEl = toast && (
-    <div className={`toast ${toast.kind}`} role={toast.kind === "error" ? "alert" : "status"}>{toast.text}</div>
+    <div className={`toast ${toast.kind}`} role={toast.kind === "error" ? "alert" : "status"}>
+      {toast.text}
+    </div>
   );
 
-  if (!authed) return <><a className="skip" href="#main">Skip to content</a><Login onLogin={onLogin} />{toastEl}</>;
-  if (!me) return <p className="center" role="status">Loading...</p>;
+  if (!authed)
+    return (
+      <>
+        <a className="skip" href="#main">
+          Skip to content
+        </a>
+        <Login onLogin={onLogin} />
+        {toastEl}
+      </>
+    );
+  if (!me)
+    return (
+      <p className="center loading" role="status">
+        Loading CareCircle...
+      </p>
+    );
 
   if (elderMode) {
     return (
       <main id="main">
-        <ElderMode me={me} notify={notify} pendingVersion={version} onResolved={pendingChanged} onExit={() => setElderMode(false)} onLogout={() => void logout()} />
+        <ElderMode
+          me={me}
+          notify={notify}
+          pendingVersion={version}
+          onResolved={pendingChanged}
+          onExit={() => setElderMode(false)}
+          onLogout={() => void logout()}
+        />
         {toastEl}
       </main>
     );
@@ -91,20 +116,39 @@ export function App() {
 
   return (
     <>
-      <a className="skip" href="#main">Skip to content</a>
+      <a className="skip" href="#main">
+        Skip to content
+      </a>
       <header className="topbar">
-        <div className="brand">CareCircle <span className="muted">for {me.profile.name}</span></div>
+        <div className="brand">
+          CareCircle <span className="muted">for {me.profile.name}</span>
+        </div>
         <div className="row wrap">
-          <span className="badge" aria-label={`Signed in as ${ROLE_LABEL[me.role]}`}>{ROLE_LABEL[me.role]}</span>
-          <button className="btn btn-secondary" onClick={() => setElderMode(true)}>Elder mode</button>
-          <button className="btn btn-secondary" onClick={() => void logout()}>Sign out</button>
+          <span className="badge" aria-label={`Signed in as ${ROLE_LABEL[me.role]}`}>
+            {ROLE_LABEL[me.role]}
+          </span>
+          <button className="btn btn-secondary" onClick={() => setElderMode(true)}>
+            Elder mode
+          </button>
+          <button className="btn btn-secondary" onClick={() => void logout()}>
+            Sign out
+          </button>
         </div>
       </header>
       <nav aria-label="Main" className="tabs">
         {TABS.map((t) => (
-          <button key={t.id} className={`tab${tab === t.id ? " active" : ""}`} aria-current={tab === t.id ? "page" : undefined} onClick={() => setTab(t.id)}>
+          <button
+            key={t.id}
+            className={`tab${tab === t.id ? " active" : ""}`}
+            aria-current={tab === t.id ? "page" : undefined}
+            onClick={() => setTab(t.id)}
+          >
             {t.label}
-            {t.id === "settings" && me.pending_count > 0 ? <span className="dot" aria-label={`${me.pending_count} waiting for approval`}>{me.pending_count}</span> : null}
+            {t.id === "settings" && me.pending_count > 0 ? (
+              <span className="dot" aria-label={`${me.pending_count} waiting for approval`}>
+                {me.pending_count}
+              </span>
+            ) : null}
           </button>
         ))}
       </nav>
@@ -114,6 +158,7 @@ export function App() {
         {tab === "meds" && <MedicationsTab me={me} notify={notify} onPendingChange={pendingChanged} />}
         {tab === "appts" && <AppointmentsTab me={me} notify={notify} onPendingChange={pendingChanged} />}
         {tab === "care" && <CareTab me={me} notify={notify} />}
+        {tab === "emergency" && <EmergencyTab me={me} notify={notify} />}
         {tab === "inbox" && <OutboxTab />}
         {tab === "settings" && <SettingsTab me={me} notify={notify} onChanged={pendingChanged} />}
       </main>

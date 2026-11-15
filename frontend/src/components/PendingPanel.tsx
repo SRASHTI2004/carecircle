@@ -35,19 +35,35 @@ export function PendingPanel({ me, notify, large, version, onResolved }: Props) 
 
   return (
     <section className={`card pending${large ? " large" : ""}`} aria-labelledby="pending-h">
-      <h2 id="pending-h">Waiting for {me.role === "elder" ? "your" : `${me.profile.name}'s`} approval ({list.length})</h2>
+      <h2 id="pending-h">
+        Waiting for {me.role === "elder" ? "your" : `${me.profile.name}'s`} approval ({list.length})
+      </h2>
       <ul className="list">
         {list.map((p) => (
           <li key={p.id} className="list-item">
             <div>
               <strong>{p.summary}</strong>
-              <div className="muted">Requested by {ROLE_LABEL[p.requested_by]} &middot; {formatUtc(p.created_at)}</div>
+              <div className="muted">
+                Requested by {ROLE_LABEL[p.requested_by]} &middot; {formatUtc(p.created_at)}
+              </div>
               <span className="badge badge-due">Pending elder approval</span>
             </div>
             {me.role === "elder" && (
               <div className="row">
-                <button className="btn btn-primary" onClick={() => void decide(p.id, "approve")} aria-label={`Approve: ${p.summary}`}>Approve</button>
-                <button className="btn btn-danger" onClick={() => void decide(p.id, "reject")} aria-label={`Reject: ${p.summary}`}>Reject</button>
+                <button
+                  className="btn btn-primary"
+                  onClick={() => void decide(p.id, "approve")}
+                  aria-label={`Approve: ${p.summary}`}
+                >
+                  Approve
+                </button>
+                <button
+                  className="btn btn-danger"
+                  onClick={() => void decide(p.id, "reject")}
+                  aria-label={`Reject: ${p.summary}`}
+                >
+                  Reject
+                </button>
               </div>
             )}
           </li>

@@ -1,7 +1,9 @@
-fastapi==0.115.6
-uvicorn==0.34.0
+fastapi==0.163.0
+starlette==1.10.0
+pydantic==2.14.3
+uvicorn==0.54.0
 bcrypt==4.2.1
 httpx==0.28.1
-python-dotenv==1.0.1
-python-multipart==0.0.20
+python-dotenv==1.2.4
+python-multipart==0.0.33
 tzdata==2024.2

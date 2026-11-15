@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { api } from "../api";
 import type { Dose, Me } from "../types";
 import { DISCLAIMER, formatDateTime, formatTime, isTaken, Notify, speak, stopSpeaking, useLoad } from "../util";
+import { CheckinCard } from "./CheckinCard";
 import { DoseList } from "./DoseList";
+import { EmergencyTab } from "./EmergencyTab";
 import { PendingPanel } from "./PendingPanel";
 
 interface Props {
@@ -15,8 +17,16 @@ interface Props {
 }
 
 export function doseSentence(d: Dose): string {
-  const state = isTaken(d.status) ? "Already taken." : d.status === "skipped" ? "Skipped." : d.status === "missed" ? "This one was missed." : "";
-  return `At ${formatTime(d.scheduled_at)}, ${d.name}, ${d.dose}. ${d.instructions ? `${d.instructions}.` : ""} ${state}`.replace(/\s+/g, " ").trim();
+  const state = isTaken(d.status)
+    ? "Already taken."
+    : d.status === "skipped"
+      ? "Skipped."
+      : d.status === "missed"
+        ? "This one was missed."
+        : "";
+  return `At ${formatTime(d.scheduled_at)}, ${d.name}, ${d.dose}. ${d.instructions ? `${d.instructions}.` : ""} ${state}`
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 export function readAloudText(name: string, doses: Dose[]): string {
@@ -29,6 +39,7 @@ export function ElderMode({ me, notify, pendingVersion, onResolved, onExit, onLo
   const today = useLoad(api.today, 30_000);
   const appts = useLoad(api.appointments);
   const [speaking, setSpeaking] = useState(false);
+  const [showCard, setShowCard] = useState(false);
   const canLog = me.role !== "family";
   const next = appts.data?.[0];
 
@@ -52,10 +63,14 @@ export function ElderMode({ me, notify, pendingVersion, onResolved, onExit, onLo
   return (
     <div className="elder">
       <header className="elder-head">
-        <h1>Hello, {me.profile.name}</h1>
+        <h1>Hello, {me.role === "elder" ? me.profile.name : `${me.profile.name}'s day`}</h1>
         <div className="row wrap">
-          <button className="btn btn-big btn-secondary" onClick={onExit}>Standard view</button>
-          <button className="btn btn-big btn-secondary" onClick={onLogout}>Sign out</button>
+          <button className="btn btn-big btn-secondary" onClick={onExit}>
+            Standard view
+          </button>
+          <button className="btn btn-big btn-secondary" onClick={onLogout}>
+            Sign out
+          </button>
         </div>
       </header>
 
@@ -66,21 +81,44 @@ export function ElderMode({ me, notify, pendingVersion, onResolved, onExit, onLo
       <PendingPanel me={me} notify={notify} large version={pendingVersion} onResolved={onResolved} />
 
       <section aria-labelledby="e-today">
-        <h2 id="e-today">Today's medicines</h2>
-        {today.error && <p role="alert" className="error">{today.error}</p>}
-        {today.data && <DoseList large doses={today.data.doses} canLog={canLog} notify={notify} onChanged={() => void today.reload()} />}
+        <h2 id="e-today">Today's medicines and routines</h2>
+        {today.loading && <p role="status">Loading...</p>}
+        {today.error && (
+          <p role="alert" className="error">
+            {today.error}
+          </p>
+        )}
+        {today.data && (
+          <DoseList
+            large
+            doses={today.data.doses}
+            canLog={canLog}
+            notify={notify}
+            onChanged={() => void today.reload()}
+          />
+        )}
       </section>
+
+      <CheckinCard me={me} notify={notify} large />
 
       <section aria-labelledby="e-appt">
         <h2 id="e-appt">Next doctor visit</h2>
         {next ? (
           <p className="elder-appt">
-            <strong>{next.doctor}</strong><br />{formatDateTime(next.starts_at)}<br />{next.place}
+            <strong>{next.doctor}</strong>
+            <br />
+            {formatDateTime(next.starts_at)}
+            <br />
+            {next.place}
           </p>
         ) : (
           <p>No visits planned.</p>
         )}
       </section>
+      <button className="btn btn-big btn-secondary" aria-expanded={showCard} onClick={() => setShowCard(!showCard)}>
+        {showCard ? "Hide my emergency card" : "My emergency card"}
+      </button>
+      {showCard && <EmergencyTab me={me} notify={notify} />}
       <p className="elder-note">{DISCLAIMER}</p>
     </div>
   );

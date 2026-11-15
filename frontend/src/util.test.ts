@@ -4,8 +4,15 @@ import type { Dose } from "./types";
 import { formatTime, isTaken } from "./util";
 
 const dose = (over: Partial<Dose> = {}): Dose => ({
-  medication_id: 1, name: "Metformin", dose: "500 mg", instructions: "After food",
-  scheduled_at: "2025-03-03T08:00", status: "upcoming", logged_by: null, ...over,
+  medication_id: 1,
+  name: "Metformin",
+  dose: "500 mg",
+  instructions: "After food",
+  kind: "medicine",
+  scheduled_at: "2025-03-03T08:00",
+  status: "upcoming",
+  logged_by: null,
+  ...over,
 });
 
 describe("formatTime", () => {
@@ -33,7 +40,10 @@ describe("read aloud text", () => {
   });
 
   it("summarises how many doses are still to take", () => {
-    const text = readAloudText("Margaret", [dose({ status: "taken_on_time" }), dose({ scheduled_at: "2025-03-03T20:00" })]);
+    const text = readAloudText("Margaret", [
+      dose({ status: "taken_on_time" }),
+      dose({ scheduled_at: "2025-03-03T20:00" }),
+    ]);
     expect(text).toContain("Hello Margaret");
     expect(text).toContain("2 doses, and 1 still to take");
   });

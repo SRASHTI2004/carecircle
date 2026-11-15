@@ -1,6 +1,26 @@
 import type {
-  Activity, AiDraftResponse, Appointment, AppointmentInput, ChangeResult, Comment, Contact, Dose, Me, Medication,
-  MedicationInput, OutboxEmail, Pending, Role, SummaryResponse, Weekly,
+  Activity,
+  AiDraftResponse,
+  Appointment,
+  AppointmentInput,
+  ChangeResult,
+  Checkin,
+  Comment,
+  Contact,
+  Dose,
+  Emergency,
+  EmergencyInput,
+  Me,
+  Medication,
+  MedicationInput,
+  Mood,
+  NotifyType,
+  OutboxEmail,
+  PasscodeInfo,
+  Pending,
+  Role,
+  SummaryResponse,
+  Weekly,
 } from "./types";
 
 const TOKEN_KEY = "carecircle.token";
@@ -24,7 +44,10 @@ export const tokenStore = {
 };
 
 export class ApiError extends Error {
-  constructor(message: string, public status: number) {
+  constructor(
+    message: string,
+    public status: number,
+  ) {
     super(message);
   }
 }
@@ -73,8 +96,10 @@ export const api = {
     request<{ status: string }>("POST", "/doses", { medication_id, scheduled_at, action }),
   weekly: () => request<Weekly>("GET", "/adherence/weekly"),
   medications: () => request<Medication[]>("GET", "/medications"),
-  addMedication: (m: MedicationInput) => request<ChangeResult>("POST", "/medications", m),
-  editMedication: (id: number, m: MedicationInput) => request<ChangeResult>("PUT", `/medications/${id}`, m),
+  addMedication: (m: MedicationInput, allowDuplicate = false) =>
+    request<ChangeResult>("POST", `/medications${allowDuplicate ? "?allow_duplicate=true" : ""}`, m),
+  editMedication: (id: number, m: MedicationInput, allowDuplicate = false) =>
+    request<ChangeResult>("PUT", `/medications/${id}${allowDuplicate ? "?allow_duplicate=true" : ""}`, m),
   deleteMedication: (id: number) => request<ChangeResult>("DELETE", `/medications/${id}`),
   appointments: () => request<Appointment[]>("GET", "/appointments"),
   addAppointment: (a: AppointmentInput) => request<ChangeResult>("POST", "/appointments", a),
@@ -83,13 +108,27 @@ export const api = {
   pending: () => request<Pending[]>("GET", "/pending"),
   decide: (id: number, decision: "approve" | "reject") =>
     request<{ status: string }>("POST", `/pending/${id}/${decision}`),
-  activity: () => request<Activity[]>("GET", "/activity"),
+  activity: (offset = 0) => request<Activity[]>("GET", `/activity?limit=20&offset=${offset}`),
   comments: () => request<Comment[]>("GET", "/comments"),
   addComment: (text: string) => request<{ status: string }>("POST", "/comments", { text }),
   contacts: () => request<Contact[]>("GET", "/contacts"),
   addContact: (c: { name: string; email: string; role: Role }) => request<{ status: string }>("POST", "/contacts", c),
   deleteContact: (id: number) => request<void>("DELETE", `/contacts/${id}`),
-  outbox: () => request<{ smtp_configured: boolean; emails: OutboxEmail[] }>("GET", "/outbox"),
+  setNotify: (id: number, notify: NotifyType[]) =>
+    request<{ notify: NotifyType[] }>("PUT", `/contacts/${id}/notify`, { notify }),
+  outbox: (offset = 0) =>
+    request<{ smtp_configured: boolean; emails: OutboxEmail[] }>("GET", `/outbox?limit=20&offset=${offset}`),
+  testEmail: (email: string) =>
+    request<{ delivered: boolean; smtp_configured: boolean; message: string }>("POST", "/settings/test-email", {
+      email,
+    }),
+  passcodes: () => request<PasscodeInfo[]>("GET", "/passcodes"),
+  rotatePasscode: (role: Role) => request<{ passcode: string }>("POST", `/passcodes/${role}/rotate`),
+  revokePasscode: (role: Role) => request<{ status: string }>("DELETE", `/passcodes/${role}`),
+  emergency: () => request<Emergency>("GET", "/emergency"),
+  saveEmergency: (e: EmergencyInput) => request<{ status: string }>("PUT", "/emergency", e),
+  checkins: () => request<Checkin[]>("GET", "/checkins?limit=14"),
+  checkin: (mood: Mood, note: string) => request<{ alerted: number }>("POST", "/checkins", { mood, note }),
   readPrescription: (file: File) => {
     const form = new FormData();
     form.append("file", file);

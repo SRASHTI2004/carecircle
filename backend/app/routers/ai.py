@@ -66,12 +66,15 @@ async def read_prescription(
         }
     drafts = [
         {
+            "kind": "medicine",
             "name": m.name,
             "dose": m.dose or "as prescribed",
             "times": ai.draft_times(m.times_per_day),
             "instructions": m.instructions,
             "start_date": start,
             "stock": 0,
+            "low_stock_threshold": 5,
+            "end_date": None,
         }
         for m in result.medicines
     ]

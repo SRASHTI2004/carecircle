@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { DoseStatus, Role } from "./types";
+import type { DoseStatus, Mood, NotifyType, Role } from "./types";
 
 export const ROLE_LABEL: Record<Role, string> = { elder: "Elder", caretaker: "Caretaker", family: "Family" };
 
@@ -23,11 +23,22 @@ export function formatTime(slot: string): string {
 
 export function formatDateTime(slot: string): string {
   const d = new Date(slot);
-  return d.toLocaleString(undefined, { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
+  return d.toLocaleString(undefined, {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    hour: "numeric",
+    minute: "2-digit",
+  });
 }
 
 export function formatUtc(iso: string): string {
-  return new Date(iso).toLocaleString(undefined, { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
+  return new Date(iso).toLocaleString(undefined, {
+    day: "numeric",
+    month: "short",
+    hour: "numeric",
+    minute: "2-digit",
+  });
 }
 
 export function isTaken(s: DoseStatus): boolean {
@@ -88,3 +99,29 @@ export function speak(text: string): boolean {
 export function stopSpeaking(): void {
   if ("speechSynthesis" in window) window.speechSynthesis.cancel();
 }
+
+export const STATUS_ICON: Record<DoseStatus, string> = {
+  upcoming: "⏳", // hourglass
+  due: "⏰", // alarm clock
+  taken_on_time: "✔", // check
+  taken_late: "✔",
+  skipped: "⏭", // skip
+  missed: "⚠", // warning
+};
+
+export const NOTIFY_LABEL: Record<NotifyType, string> = {
+  dose_upcoming: "Upcoming doses",
+  dose_missed: "Missed doses",
+  routine: "Routine reminders",
+  appointment: "Appointments",
+  low_stock: "Low stock",
+  wellbeing: "Wellbeing alerts",
+};
+
+export const NOTIFY_ALL = Object.keys(NOTIFY_LABEL) as NotifyType[];
+
+export const MOODS: { mood: Mood; label: string; icon: string }[] = [
+  { mood: "good", label: "Good", icon: "🙂" },
+  { mood: "okay", label: "Okay", icon: "😐" },
+  { mood: "unwell", label: "Not well", icon: "🙁" },
+];
