@@ -4,6 +4,8 @@ import { readFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { chromium } from "playwright-core";
 
 const BASE = process.argv[2] ?? "http://localhost:8000";
+// E2E_READONLY=1 skips every step that changes data (use it against the live demo).
+const RO = process.env.E2E_READONLY === "1";
 const axeSource = readFileSync("node_modules/axe-core/axe.min.js", "utf8");
 const shots = new URL("../../docs/screenshots/", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1");
 mkdirSync(shots, { recursive: true });
@@ -59,12 +61,14 @@ await session("elder", desktop, async (page) => {
   await axeCheck(page, "elder-mode-dark");
   step("elder dark theme");
   await page.getByRole("switch", { name: /Dark theme/ }).click();
-  await page.getByRole("button", { name: /Good/ }).first().click();
-  await page.getByText("Thank you for checking in.").waitFor();
-  step("elder check-in");
-  const doneBtn = page.getByRole("button", { name: /Mark .* as (done|taken)/ }).first();
-  if (await doneBtn.isEnabled()) await doneBtn.click();
-  step("elder marks dose");
+  if (!RO) {
+    await page.getByRole("button", { name: /Good/ }).first().click();
+    await page.getByText("Thank you for checking in.").waitFor();
+    step("elder check-in");
+    const doneBtn = page.getByRole("button", { name: /Mark .* as (done|taken)/ }).first();
+    if (await doneBtn.isEnabled()) await doneBtn.click();
+    step("elder marks dose");
+  }
   await page.getByRole("button", { name: "Standard view" }).click();
   for (const tab of ["Today", "Medicines & routines", "Appointments", "Care circle", "Emergency card", "Email reminders", "Settings"]) {
     await page.getByRole("button", { name: tab, exact: true }).click();
@@ -83,10 +87,12 @@ await session("elder", desktop, async (page) => {
   await page.keyboard.press("Escape");
   step("doctor view + Escape closes");
   await page.getByRole("button", { name: "Settings", exact: true }).click();
-  await page.getByLabel("Send to").fill("judge@example.com");
-  await page.getByRole("button", { name: "Send test email" }).click();
-  await page.locator(".toast").waitFor();
-  step(`test email toast: ${await page.locator(".toast").innerText()}`);
+  if (!RO) {
+    await page.getByLabel("Send to").fill("judge@example.com");
+    await page.getByRole("button", { name: "Send test email" }).click();
+    await page.locator(".toast").waitFor();
+    step(`test email toast: ${await page.locator(".toast").innerText()}`);
+  }
 });
 
 // Elder on a phone: light and dark
@@ -107,12 +113,13 @@ await session("elder-phone", phone, async (page) => {
 await session("caretaker-phone", phone, async (page) => {
   await page.getByRole("button", { name: "Try as Caretaker" }).click();
   await page.getByRole("button", { name: "Medicines & routines", exact: true }).click();
+  if (!RO) {
   await page.getByRole("button", { name: "Add routine" }).click();
-  const name = `Stretching ${Date.now() % 10000}`;
-  await page.getByLabel("Routine name").fill(name);
-  await page.getByRole("button", { name: "Save", exact: true }).click();
-  await page.getByText(`Add ${name}: saved.`).waitFor();
-  step("caretaker adds routine");
+    const name = `Stretching ${Date.now() % 10000}`;
+    await page.getByLabel("Routine name").fill(name);
+    await page.getByRole("button", { name: "Save", exact: true }).click();
+    await page.getByText(`Add ${name}: saved.`).waitFor();
+    step("caretaker adds routine");}
   const hscroll = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
   step("no horizontal scroll on phone", !hscroll);
   await shot(page, "05-phone-medicines");

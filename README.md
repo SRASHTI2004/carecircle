@@ -238,7 +238,7 @@ For hot-reload UI work run `npm run dev` in `frontend/` (it proxies `/api` to po
 ## Tests and coverage
 
 ```bash
-cd backend && ../.venv/Scripts/python -m pytest --cov=app          # 98 tests, 96% coverage (CI requires >= 90%)
+cd backend && ../.venv/Scripts/python -m pytest --cov=app          # 104 tests, 96% coverage (CI requires >= 90%)
 cd backend && ../.venv/Scripts/ruff check . && ../.venv/Scripts/ruff format --check . && ../.venv/Scripts/mypy app
 cd frontend && npm run lint && npm run format:check && npm test && npm run build     # 70 tests incl. axe + AAA contrast (both themes)
 cd frontend && npm run e2e -- http://localhost:8000                # real-browser click-through (needs Edge/Chrome)
