@@ -10,6 +10,7 @@ interface Props {
   notify: Notify;
 }
 
+/** Today screen: doses, wellbeing check-in and weekly adherence with chart. */
 export function TodayTab({ me, notify }: Props) {
   const today = useLoad(api.today, 60_000);
   const weekly = useLoad(api.weekly);

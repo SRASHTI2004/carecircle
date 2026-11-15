@@ -25,6 +25,7 @@ import type {
 
 const TOKEN_KEY = "carecircle.token";
 
+/** Session token kept in sessionStorage (safe if storage is unavailable). */
 export const tokenStore = {
   get: (): string | null => {
     try {
@@ -83,6 +84,7 @@ async function request<T>(method: string, path: string, body?: unknown, form?: F
   return data as T;
 }
 
+/** Typed client for every backend endpoint; errors surface as readable ApiError messages. */
 export const api = {
   login: (passcode: string) => request<{ token: string; role: Role }>("POST", "/auth/login", { passcode }),
   logout: () => request<void>("POST", "/auth/logout"),

@@ -20,6 +20,7 @@ function who(d: Dose, elderName: string): string {
   return d.logged_by === "elder" ? firstName(elderName) : ROLE_LABEL[d.logged_by as keyof typeof ROLE_LABEL];
 }
 
+/** Today's doses grouped into Now and next, Later today and Done today, with Taken, Skip and Undo actions. */
 export function DoseList({ doses, now, elderName, canLog, large, notify, onChanged }: Props) {
   const [busy, setBusy] = useState<string | null>(null);
   const keyOf = (d: Dose) => `${d.medication_id}-${d.scheduled_at}`;

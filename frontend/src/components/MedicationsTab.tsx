@@ -10,6 +10,7 @@ interface Props {
   onPendingChange: () => void;
 }
 
+/** Medicines and routines list with add/edit/stop, duplicate warning and AI prescription drafts. */
 export function MedicationsTab({ me, notify, onPendingChange }: Props) {
   const meds = useLoad(api.medications);
   const [editing, setEditing] = useState<number | "new" | "newRoutine" | null>(null);

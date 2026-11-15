@@ -28,6 +28,7 @@ interface Props {
   onLogout: () => void;
 }
 
+/** One dose as a sentence for the read-aloud feature. */
 export function doseSentence(d: Dose): string {
   const state = isTaken(d.status)
     ? "Already taken."
@@ -41,12 +42,14 @@ export function doseSentence(d: Dose): string {
     .trim();
 }
 
+/** Full read-aloud script for today's doses. */
 export function readAloudText(name: string, doses: Dose[]): string {
   if (doses.length === 0) return `Hello ${name}. You have no medicines to take today.`;
   const left = doses.filter((d) => d.status === "upcoming" || d.status === "due" || d.status === "missed").length;
   return `Hello ${name}. Today you have ${doses.length} ${doses.length === 1 ? "dose" : "doses"}, and ${left} still to take. ${doses.map(doseSentence).join(" ")}`;
 }
 
+/** The elder-first screen: large text, light or dark theme, grouped doses, check-in and read aloud. */
 export function ElderMode({ me, notify, pendingVersion, onResolved, onExit, onLogout }: Props) {
   const today = useLoad(api.today, 30_000);
   const appts = useLoad(api.appointments);

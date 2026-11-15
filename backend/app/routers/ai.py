@@ -17,12 +17,14 @@ from ..security import ai_limiter
 from ..services import adherence, ai
 
 router = APIRouter(prefix="/api/ai")
-MAX_IMAGE_BYTES = 5 * 1024 * 1024
+BYTES_PER_MB = 1024 * 1024
+MAX_IMAGE_MB = 5
+MAX_IMAGE_BYTES = MAX_IMAGE_MB * BYTES_PER_MB
 MIME_TYPES = {"image/jpeg", "image/png", "image/webp"}
 MAGIC = {b"\xff\xd8\xff": "image/jpeg", b"\x89PNG": "image/png", b"RIFF": "image/webp"}
 
 
-CACHE_TTL = timedelta(hours=6)
+CACHE_TTL = timedelta(hours=6)  # how long a weekly AI summary is reused
 
 
 def _rate_limit(session: Session) -> None:

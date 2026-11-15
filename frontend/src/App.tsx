@@ -24,6 +24,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "settings", label: "Settings" },
 ];
 
+/** Application shell: session handling, navigation tabs and Elder mode switching. */
 export function App() {
   const [authed, setAuthed] = useState<boolean>(() => tokenStore.get() !== null);
   const [me, setMe] = useState<Me | null>(null);

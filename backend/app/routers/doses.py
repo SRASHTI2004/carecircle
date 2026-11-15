@@ -19,6 +19,8 @@ from .common import local_now
 
 router = APIRouter(prefix="/api")
 
+MARKABLE_DAYS_BACK = 1  # doses from today and yesterday can be marked
+
 
 @router.get("/doses/today")
 def doses_today(
@@ -47,7 +49,7 @@ def log_dose(
     valid = {fmt_slot(s) for s in adherence.slots_for(med, slot.date(), slot.date())}
     if fmt_slot(slot) not in valid:
         raise HTTPException(422, "That is not a scheduled dose for this medicine.")
-    if slot.date() < now.date() - timedelta(days=1) or slot.date() > now.date():
+    if slot.date() < now.date() - timedelta(days=MARKABLE_DAYS_BACK) or slot.date() > now.date():
         raise HTTPException(422, "Only today's and yesterday's doses can be marked.")
     existing = conn.execute(
         "SELECT status FROM dose_logs WHERE medication_id = ? AND scheduled_at = ?", (med["id"], fmt_slot(slot))

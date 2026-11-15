@@ -2,6 +2,7 @@ import { FormEvent, useState } from "react";
 import type { MedicationInput } from "../types";
 import { todayIso } from "../util";
 
+/** Blank form values for a new medicine. */
 export const EMPTY_MED: MedicationInput = {
   kind: "medicine",
   name: "",
@@ -14,6 +15,7 @@ export const EMPTY_MED: MedicationInput = {
   low_stock_threshold: 5,
 };
 
+/** Blank form values for a new daily routine. */
 export const EMPTY_ROUTINE: MedicationInput = {
   ...EMPTY_MED,
   kind: "routine",
@@ -30,6 +32,7 @@ interface Props {
   onCancel: () => void;
 }
 
+/** Add/edit form shared by medicines, routines and AI prescription drafts. */
 export function MedForm({ initial, submitLabel, idPrefix, onSubmit, onCancel }: Props) {
   const [m, setM] = useState<MedicationInput>(initial);
   const [busy, setBusy] = useState(false);

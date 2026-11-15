@@ -92,6 +92,7 @@ function CardView({ card, onClose }: { card: Emergency; onClose: () => void }) {
   );
 }
 
+/** Emergency information card with a full-screen doctor view; only the elder can edit it. */
 export function EmergencyTab({ me, notify }: Props) {
   const card = useLoad(api.emergency);
   const [form, setForm] = useState<EmergencyInput | null>(null);

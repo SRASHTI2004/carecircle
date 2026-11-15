@@ -3,6 +3,7 @@ import { api } from "../api";
 import type { Role } from "../types";
 import { DISCLAIMER, ROLE_LABEL } from "../util";
 
+/** Demo passcodes shown on the landing page for one-click sign-in. */
 export const DEMO: { role: Role; passcode: string; blurb: string }[] = [
   { role: "elder", passcode: "DEMO-ELDER24", blurb: "Big buttons, read aloud, approves changes" },
   { role: "caretaker", passcode: "DEMO-CARER24", blurb: "Manages medicines and appointments" },
@@ -20,6 +21,7 @@ const FEATURES = [
   ["Made to be easy", "Large text, high contrast, read aloud, keyboard friendly."],
 ];
 
+/** Landing page: product summary, one-click demo, passcode form and new-profile setup. */
 export function Login({ onLogin }: Props) {
   const [passcode, setPasscode] = useState("");
   const [error, setError] = useState("");

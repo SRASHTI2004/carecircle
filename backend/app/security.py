@@ -90,8 +90,16 @@ class RateLimiter:
 
 
 # 5 wrong guesses per client+profile, and 20 per profile overall, per 15 minutes.
-client_limiter = RateLimiter(max_attempts=5, window_seconds=15 * 60)
-profile_limiter = RateLimiter(max_attempts=20, window_seconds=15 * 60)
-create_limiter = RateLimiter(max_attempts=10, window_seconds=60 * 60)
-ai_limiter = RateLimiter(max_attempts=10, window_seconds=60 * 60)
-email_limiter = RateLimiter(max_attempts=5, window_seconds=60 * 60)
+FIFTEEN_MINUTES = 15 * 60
+ONE_HOUR = 60 * 60
+LOGIN_ATTEMPTS_PER_CLIENT = 5
+LOGIN_ATTEMPTS_PER_PROFILE = 20
+PROFILES_PER_CLIENT_PER_HOUR = 10
+AI_CALLS_PER_PROFILE_PER_HOUR = 10
+TEST_EMAILS_PER_PROFILE_PER_HOUR = 5
+
+client_limiter = RateLimiter(max_attempts=LOGIN_ATTEMPTS_PER_CLIENT, window_seconds=FIFTEEN_MINUTES)
+profile_limiter = RateLimiter(max_attempts=LOGIN_ATTEMPTS_PER_PROFILE, window_seconds=FIFTEEN_MINUTES)
+create_limiter = RateLimiter(max_attempts=PROFILES_PER_CLIENT_PER_HOUR, window_seconds=ONE_HOUR)
+ai_limiter = RateLimiter(max_attempts=AI_CALLS_PER_PROFILE_PER_HOUR, window_seconds=ONE_HOUR)
+email_limiter = RateLimiter(max_attempts=TEST_EMAILS_PER_PROFILE_PER_HOUR, window_seconds=ONE_HOUR)

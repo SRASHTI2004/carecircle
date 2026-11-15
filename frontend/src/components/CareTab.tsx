@@ -8,6 +8,7 @@ interface Props {
   notify: Notify;
 }
 
+/** Care circle screen: AI weekly summary, family notes and the paginated activity feed. */
 export function CareTab({ me, notify }: Props) {
   const summary = useLoad(api.weeklySummary);
   const comments = useLoad(api.comments);

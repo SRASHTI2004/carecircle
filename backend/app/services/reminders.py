@@ -20,6 +20,7 @@ from .mailer import render_email, retry_failed, send_email
 log = logging.getLogger("carecircle.reminders")
 
 UPCOMING_WINDOW = timedelta(minutes=15)
+APPOINTMENT_LOOKAHEAD = timedelta(days=1)
 MISSED_MAX_AGE = timedelta(hours=6)  # don't send stale "missed" emails after long downtime
 
 
@@ -108,7 +109,7 @@ def _appointment_reminders(conn: sqlite3.Connection, profile: sqlite3.Row, now: 
     sent = 0
     rows = conn.execute(
         "SELECT * FROM appointments WHERE profile_id = ? AND starts_at > ? AND starts_at <= ?",
-        (profile["id"], fmt_slot(now), fmt_slot(now + timedelta(days=1))),
+        (profile["id"], fmt_slot(now), fmt_slot(now + APPOINTMENT_LOOKAHEAD)),
     ).fetchall()
     everyone = (ELDER, CARETAKER, FAMILY)
     for a in rows:

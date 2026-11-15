@@ -92,6 +92,7 @@ function ApptForm({
   );
 }
 
+/** Upcoming appointments with add, edit and delete (changes may wait for the elder's approval). */
 export function AppointmentsTab({ me, notify, onPendingChange }: Props) {
   const appts = useLoad(api.appointments);
   const [editing, setEditing] = useState<number | "new" | null>(null);

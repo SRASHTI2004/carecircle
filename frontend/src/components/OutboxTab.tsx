@@ -9,6 +9,7 @@ function state(e: OutboxEmail, smtp: boolean): { label: string; cls: string } {
   return { label: "Not sent (demo)", cls: "badge-upcoming" };
 }
 
+/** Email reminders page: the demo outbox, or sent mail when SMTP is configured. */
 export function OutboxTab() {
   const box = useLoad(() => api.outbox(0), 30_000);
   const [more, setMore] = useState<OutboxEmail[]>([]);
