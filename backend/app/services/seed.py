@@ -52,9 +52,11 @@ def seed_demo(conn: sqlite3.Connection) -> bool:
         med_id = cur.lastrowid
         row = {"times": json.dumps(times), "start_date": start, "end_date": None}
         for slot in slots_for(row, today - timedelta(days=14), today):
-            if slot >= now - timedelta(hours=1):
+            if slot >= now - timedelta(minutes=20):
                 continue  # leave today's remaining doses for the live demo
             roll = rng.random()
+            if slot.date() == today:
+                roll = 0.0  # today stays clean so the demo opens calm; history has a realistic mix
             if roll < 0.80:
                 logged, status = slot + timedelta(minutes=rng.randint(0, 20)), "taken"
             elif roll < 0.90:

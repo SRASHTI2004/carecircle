@@ -17,6 +17,15 @@
   --info-bg: #e1ecf9;
   --info-text: #0a3d73;
   --focus: #b45309;
+  --border-soft: #d9dee7;
+  --input-border: #667085;
+  --skip-bg: #e5e7eb;
+  --skip-text: #1f2937;
+  --st-taken: #15803d;
+  --st-up: #1d4ed8;
+  --st-miss: #b91c1c;
+  --st-skip: #64748b;
+  --st-due: #b45309;
   --radius: 14px;
   --shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 1px 3px rgba(16, 24, 40, 0.08);
   font-size: 100%;
@@ -302,8 +311,8 @@ textarea {
   padding: 0.5rem 0.75rem;
   font: inherit;
   color: var(--text);
-  background: #fff;
-  border: 2px solid #667085;
+  background: var(--surface);
+  border: 2px solid var(--input-border);
   border-radius: 10px;
 }
 input[type="checkbox"] {
@@ -405,8 +414,8 @@ input[type="checkbox"] {
   color: var(--warn-text);
 }
 .badge-skipped {
-  background: #e5e7eb;
-  color: #1f2937;
+  background: var(--skip-bg);
+  color: var(--skip-text);
 }
 .badge-missed {
   background: var(--bad-bg);
@@ -461,6 +470,42 @@ input[type="checkbox"] {
   fill: #b42318;
 }
 
+.dose-groups {
+  display: grid;
+  gap: 0.25rem;
+}
+.group-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 1rem 0 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.dose-groups > section:first-child .group-title {
+  margin-top: 0;
+}
+.group-count {
+  min-width: 1.6rem;
+  padding: 0 0.45rem;
+  border-radius: 999px;
+  background: var(--info-bg);
+  color: var(--info-text);
+  font-size: 0.8rem;
+  text-align: center;
+  letter-spacing: 0;
+}
+.all-done {
+  margin: 0 0 0.5rem;
+  padding: 0.9rem 1.1rem;
+  border-radius: 14px;
+  background: var(--ok-bg);
+  color: var(--ok-text);
+  font-weight: 600;
+}
 .doses {
   list-style: none;
   padding: 0;
@@ -469,34 +514,68 @@ input[type="checkbox"] {
   gap: 0.6rem;
 }
 .dose {
+  --st: var(--border);
   display: grid;
-  grid-template-columns: 6.5rem 1fr auto;
+  gap: 0.65rem;
+  padding: 0.85rem 1rem 0.85rem 1.1rem;
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-left: 6px solid var(--st);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+}
+.dose-main {
+  display: grid;
+  grid-template-columns: 5.5rem 1fr auto;
   gap: 0.75rem;
   align-items: center;
-  padding: 0.75rem;
-  border: 2px solid var(--border);
-  border-radius: 14px;
-  background: #fff;
 }
 .dose-time {
-  font-weight: 800;
-  font-size: 1.15rem;
+  font-weight: 700;
+  font-size: 1.1rem;
+  font-variant-numeric: tabular-nums;
+}
+.dose-title strong {
+  font-weight: 700;
+}
+.dose-amount {
+  color: var(--muted);
 }
 .dose-actions {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.6rem;
+}
+.dose-actions .btn {
+  flex: 1;
+}
+.dose-done-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+  margin: 0;
+  color: var(--muted);
+  font-weight: 500;
+}
+.dose-done-line .btn-link {
+  margin-left: 0.5rem;
+  min-height: 44px;
+}
+.status-upcoming {
+  --st: var(--st-up);
 }
 .status-due {
-  border-color: #b7791f;
-  background: #fffbf0;
+  --st: var(--st-due);
 }
 .status-missed {
-  border-color: var(--danger);
+  --st: var(--st-miss);
 }
 .status-taken_on_time,
 .status-taken_late {
-  border-color: #2f855a;
-  background: #f3fbf6;
+  --st: var(--st-taken);
+}
+.status-skipped {
+  --st: var(--st-skip);
 }
 
 .mood-row {
@@ -674,195 +753,305 @@ code {
   opacity: 0.95;
 }
 
-/* ---------- Elder mode: calm, premium, AAA contrast (navy + white + warm accent) ---------- */
+/* ---------- Elder mode: light by default (off-white, near-black, deep blue), optional soft dark navy ---------- */
+:root {
+  --el-bg: #f6f6f3;
+  --el-card: #ffffff;
+  --el-text: #0f172a;
+  --el-muted: #3b4658;
+  --el-accent: #1e3a8a;
+  --el-accent-hover: #172e6e;
+  --el-accent-text: #ffffff;
+  --el-line: #7a8699;
+  --el-soft: #e1e4ea;
+  --el-st-taken: #15803d;
+  --el-st-up: #1d4ed8;
+  --el-st-miss: #b91c1c;
+  --el-st-skip: #64748b;
+  --el-st-due: #b45309;
+  --el-ok-bg: #dcfce7;
+  --el-ok-fg: #14532d;
+  --el-up-bg: #dbeafe;
+  --el-up-fg: #1e3a8a;
+  --el-miss-bg: #fee2e2;
+  --el-miss-fg: #7f1d1d;
+  --el-skip-bg: #e5e7eb;
+  --el-skip-fg: #1f2937;
+  --el-due-bg: #fef3c7;
+  --el-due-fg: #78350f;
+
+  --ed-bg: #0f1b2d;
+  --ed-card: #162337;
+  --ed-text: #f1f5f9;
+  --ed-muted: #cbd5e1;
+  --ed-accent: #9ec5fe;
+  --ed-accent-hover: #bad7ff;
+  --ed-accent-text: #0b1d3a;
+  --ed-line: #7f93ad;
+  --ed-soft: #2a3a52;
+  --ed-st-taken: #6fbf94;
+  --ed-st-up: #7fb2ff;
+  --ed-st-miss: #f19999;
+  --ed-st-skip: #94a3b8;
+  --ed-st-due: #e6b868;
+  --ed-ok-bg: #1d3a30;
+  --ed-ok-fg: #c7f0d8;
+  --ed-up-bg: #1f3a5f;
+  --ed-up-fg: #d6e7ff;
+  --ed-miss-bg: #4a2227;
+  --ed-miss-fg: #ffd6d6;
+  --ed-skip-bg: #2c394b;
+  --ed-skip-fg: #e2e8f0;
+  --ed-due-bg: #47381a;
+  --ed-due-fg: #ffecb8;
+}
+
+/* The elder screen re-maps the shared tokens, so every shared component picks up the theme. */
 .elder {
-  --e-bg: #0b1f3a;
-  --e-card: #12294a;
-  --e-text: #ffffff;
-  --e-muted: #d6e0ee;
-  --e-accent: #ffc857;
-  --e-line: #6f8fb8;
-  background: var(--e-bg);
-  color: var(--e-text);
+  --bg: var(--el-bg);
+  --surface: var(--el-card);
+  --text: var(--el-text);
+  --muted: var(--el-muted);
+  --border: var(--el-line);
+  --border-soft: var(--el-soft);
+  --input-border: var(--el-line);
+  --primary: var(--el-accent);
+  --primary-dark: var(--el-accent-hover);
+  --primary-text: var(--el-accent-text);
+  --danger: var(--el-accent);
+  --focus: #b45309;
+  --shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 10px 28px rgba(15, 23, 42, 0.07);
+  --st-taken: var(--el-st-taken);
+  --st-up: var(--el-st-up);
+  --st-miss: var(--el-st-miss);
+  --st-skip: var(--el-st-skip);
+  --st-due: var(--el-st-due);
+  --ok-bg: var(--el-ok-bg);
+  --ok-text: var(--el-ok-fg);
+  --info-bg: var(--el-up-bg);
+  --info-text: var(--el-up-fg);
+  --bad-bg: var(--el-miss-bg);
+  --bad-text: var(--el-miss-fg);
+  --warn-bg: var(--el-due-bg);
+  --warn-text: var(--el-due-fg);
+  --skip-bg: var(--el-skip-bg);
+  --skip-text: var(--el-skip-fg);
+  color-scheme: light;
+}
+.elder[data-theme="dark"] {
+  --bg: var(--ed-bg);
+  --surface: var(--ed-card);
+  --text: var(--ed-text);
+  --muted: var(--ed-muted);
+  --border: var(--ed-line);
+  --border-soft: var(--ed-soft);
+  --input-border: var(--ed-line);
+  --primary: var(--ed-accent);
+  --primary-dark: var(--ed-accent-hover);
+  --primary-text: var(--ed-accent-text);
+  --danger: var(--ed-accent);
+  --focus: #fbbf24;
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.25), 0 10px 28px rgba(0, 0, 0, 0.25);
+  --st-taken: var(--ed-st-taken);
+  --st-up: var(--ed-st-up);
+  --st-miss: var(--ed-st-miss);
+  --st-skip: var(--ed-st-skip);
+  --st-due: var(--ed-st-due);
+  --ok-bg: var(--ed-ok-bg);
+  --ok-text: var(--ed-ok-fg);
+  --info-bg: var(--ed-up-bg);
+  --info-text: var(--ed-up-fg);
+  --bad-bg: var(--ed-miss-bg);
+  --bad-text: var(--ed-miss-fg);
+  --warn-bg: var(--ed-due-bg);
+  --warn-text: var(--ed-due-fg);
+  --skip-bg: var(--ed-skip-bg);
+  --skip-text: var(--ed-skip-fg);
+  color-scheme: dark;
+}
+
+.elder {
   min-height: 100vh;
-  padding: 1.25rem;
-  font-size: 1.5rem;
+  padding: 1.5rem 1rem 3rem;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 1.25rem;
+  line-height: 1.55;
   display: grid;
-  gap: 1.25rem;
+  gap: 1.75rem;
   align-content: start;
 }
+.elder > * {
+  width: 100%;
+  max-width: 46rem;
+  margin-inline: auto;
+}
 .elder h1 {
-  font-size: 2.6rem;
+  margin: 0;
+  font-size: 2.25rem;
+  font-weight: 700;
 }
 .elder h2 {
-  font-size: 2rem;
-  margin: 0.5rem 0;
-  color: var(--e-accent);
+  margin: 0 0 0.75rem;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.elder h3 {
+  margin: 0;
+}
+.elder .group-title {
+  margin: 1.25rem 0 0.6rem;
+  font-size: 1rem;
+}
+.elder .muted {
+  font-size: 1.05rem;
 }
 .elder-head {
+  display: grid;
+  gap: 1rem;
+}
+.elder-date {
+  margin: 0 0 0.25rem;
+  color: var(--muted);
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+.elder-tools {
   display: flex;
   flex-wrap: wrap;
-  gap: 1rem;
-  justify-content: space-between;
-  align-items: center;
-}
-.elder .muted,
-.elder .elder-note {
-  color: var(--e-muted);
-  font-size: 1.2rem;
+  gap: 0.6rem;
 }
 .elder .card,
 .elder .subcard {
-  background: var(--e-card);
-  border: 2px solid var(--e-line);
-  color: var(--e-text);
-  border-radius: 24px;
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: 22px;
+  box-shadow: var(--shadow);
+  padding: 1.35rem 1.4rem;
+}
+.elder .subcard {
   box-shadow: none;
 }
 .elder .btn {
-  border-width: 3px;
-  border-radius: 18px;
+  min-height: 56px;
+  padding: 0.6rem 1.4rem;
+  border-radius: 16px;
+  border-width: 2px;
+  font-size: 1.15rem;
+  font-weight: 600;
 }
 .elder .btn-primary {
-  background: var(--e-accent);
-  color: #0b1f3a;
-  border-color: var(--e-accent);
+  background: var(--primary);
+  color: var(--primary-text);
+  border-color: var(--primary);
 }
-.elder .btn-primary:hover:not(:disabled) {
-  background: #ffd47f;
-}
-.elder .btn-secondary {
-  background: #fff;
-  color: #0b1f3a;
-  border-color: #fff;
-}
+.elder .btn-secondary,
 .elder .btn-danger {
   background: transparent;
-  color: #ffc2c2;
-  border-color: #ffc2c2;
+  color: var(--primary);
+  border-color: var(--primary);
+}
+.elder .btn-secondary:hover:not(:disabled),
+.elder .btn-danger:hover:not(:disabled) {
+  background: var(--info-bg);
 }
 .elder .btn-link {
-  color: var(--e-accent);
+  color: var(--primary);
+  font-size: 1.05rem;
 }
-.elder a {
-  color: var(--e-accent);
-}
-.elder .error {
-  background: #4a1212;
-  color: #ffd6d6;
-}
-.elder input,
-.elder select,
-.elder textarea {
-  font-size: 1.3rem;
-  min-height: 56px;
-}
-.elder .tag {
-  color: var(--e-accent);
-  border-color: var(--e-accent);
-}
-.elder code {
-  background: #0b1f3a;
-  color: #fff;
-}
-.elder .facts dt {
-  color: var(--e-muted);
-}
-.elder .facts div {
-  border-color: var(--e-line);
-}
-.elder :focus-visible {
-  outline: 5px solid #5eead4;
-  outline-offset: 3px;
+.elder .theme-toggle[aria-checked="true"] {
+  background: var(--info-bg);
 }
 .btn-big {
-  font-size: 1.4rem;
   min-height: 64px;
-  padding: 0.75rem 1.5rem;
 }
 .btn-huge {
-  font-size: 1.8rem;
-  min-height: 88px;
   width: 100%;
+  min-height: 76px;
+  font-size: 1.4rem;
+}
+.elder .dose {
+  padding: 1.1rem 1.25rem 1.1rem 1.35rem;
+  border-radius: 20px;
+  border-left-width: 8px;
+  gap: 0.9rem;
+}
+.elder .dose-main {
+  grid-template-columns: 1fr auto;
+  gap: 0.4rem 1rem;
+}
+.elder .dose-time {
+  grid-column: 1 / -1;
+  font-size: 1.6rem;
+  color: var(--text);
+}
+.elder .dose-title {
+  font-size: 1.35rem;
+}
+.elder .dose-actions .btn {
+  min-height: 72px;
+  font-size: 1.35rem;
+}
+.elder .dose-done-line {
+  font-size: 1.1rem;
 }
 .elder .badge {
-  font-size: 1.15rem;
-  background: #fff;
-  color: #0b1f3a;
-  border: 2px solid #0b1f3a;
+  font-size: 1rem;
 }
-.elder .badge-taken_on_time,
-.elder .badge-taken_late {
-  background: #c8f7d4;
-  color: #05300f;
-}
-.elder .badge-missed {
-  background: #ffd6d6;
-  color: #5e0b0b;
-}
-.elder .badge-due {
-  background: #fff0c2;
-  color: #4a3600;
-}
-.elder .badge-skipped {
-  background: #e5e7eb;
-  color: #111827;
-}
-.doses.large .dose {
-  grid-template-columns: 1fr;
-  background: var(--e-card);
-  border: 2px solid var(--e-line);
-  color: var(--e-text);
-  padding: 1.25rem;
-  gap: 0.75rem;
-  border-radius: 24px;
-}
-.doses.large .dose-time {
-  font-size: 2.2rem;
-  color: var(--e-accent);
-}
-.doses.large .dose-actions .btn {
-  flex: 1;
-  font-size: 1.8rem;
-  min-height: 88px;
-}
-.doses.large .status-taken_on_time,
-.doses.large .status-taken_late {
-  background: #0d3a24;
-  border-color: #7be3a1;
-}
-.doses.large .status-missed {
-  border-color: #ffb4b4;
-}
-.doses.large .status-due {
-  border-color: var(--e-accent);
-  background: #1a2e4f;
+.elder .tag {
+  font-size: 0.85rem;
 }
 .elder .mood {
-  background: #fff;
-  color: #0b1f3a;
-  border-color: #fff;
-  font-size: 1.6rem;
-  min-height: 88px;
+  min-height: 72px;
+  font-size: 1.3rem;
+  border-width: 2px;
+  border-color: var(--border);
+  color: var(--text);
+  background: var(--surface);
+}
+.elder .mood:hover:not(:disabled) {
+  background: var(--info-bg);
 }
 .elder .chip {
-  border-color: var(--e-line);
+  border-color: var(--border-soft);
 }
 .elder .pending {
-  background: #2a2100;
-  border: 3px solid var(--e-accent);
-  color: #fff;
+  border: 2px solid var(--st-due);
+  background: var(--surface);
 }
 .elder .list-item {
-  border: 2px solid var(--e-line);
-  border-radius: 18px;
+  border: 1px solid var(--border-soft);
+  border-radius: 16px;
+}
+.elder .error {
+  background: var(--bad-bg);
+  color: var(--bad-text);
+}
+.elder code {
+  background: var(--bg);
+  color: var(--text);
+}
+.elder .facts dt {
+  color: var(--muted);
+}
+.elder .facts div {
+  border-color: var(--border-soft);
 }
 .elder-appt {
-  font-size: 1.8rem;
-  border: 2px solid var(--e-line);
-  background: var(--e-card);
-  border-radius: 24px;
-  padding: 1.25rem;
+  margin: 0;
+  font-size: 1.35rem;
+  line-height: 1.5;
+}
+.elder-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 1rem;
+  text-align: center;
+}
+.elder :focus-visible {
+  outline: 4px solid var(--focus);
+  outline-offset: 3px;
 }
 
 /* ---------- Emergency card full-screen view + print ---------- */
@@ -951,18 +1140,22 @@ code {
   .demo-buttons {
     grid-template-columns: 1fr;
   }
-  .dose {
+  .dose-main {
     grid-template-columns: 1fr;
-  }
-  .dose-actions .btn {
-    flex: 1;
+    gap: 0.35rem;
   }
   .elder h1 {
-    font-size: 2rem;
+    font-size: 1.9rem;
   }
   .elder {
-    font-size: 1.3rem;
-    padding: 1rem;
+    font-size: 1.15rem;
+    padding: 1rem 0.85rem 2.5rem;
+  }
+  .elder .card {
+    padding: 1.1rem;
+  }
+  .elder .dose-main {
+    grid-template-columns: 1fr;
   }
   .big-number {
     font-size: 2.6rem;
@@ -976,5 +1169,89 @@ code {
   * {
     transition: none !important;
     animation: none !important;
+  }
+}
+
+/* compact rows for "Later today" and "Done today" */
+.dose.compact {
+  gap: 0.35rem;
+  padding-block: 0.65rem;
+  box-shadow: none;
+}
+.dose.compact .dose-time {
+  font-size: 1rem;
+}
+.elder .dose.compact {
+  padding: 0.8rem 1.1rem 0.8rem 1.2rem;
+  border-left-width: 6px;
+}
+.elder .dose.compact .dose-main {
+  grid-template-columns: 5.5rem 1fr auto;
+}
+.elder .dose.compact .dose-time {
+  grid-column: auto;
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+.elder .dose.compact .dose-title {
+  font-size: 1.2rem;
+}
+.elder .dose.compact .dose-done-line {
+  font-size: 1rem;
+}
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 2.5rem;
+  height: 1.4rem;
+  margin-left: 0.6rem;
+  vertical-align: middle;
+  border: 2px solid currentColor;
+  border-radius: 999px;
+}
+.switch::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 0.8rem;
+  height: 0.8rem;
+  border-radius: 50%;
+  background: currentColor;
+  transition: transform 0.15s;
+}
+[aria-checked="true"] > .switch {
+  background: var(--primary);
+}
+[aria-checked="true"] > .switch::after {
+  transform: translateX(1.1rem);
+  background: var(--primary-text);
+}
+@media (max-width: 700px) {
+  .elder-tools {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .elder-tools .theme-toggle {
+    grid-column: 1 / -1;
+    justify-content: center;
+  }
+  .elder .dose.compact .dose-main {
+    grid-template-columns: 1fr;
+    gap: 0.25rem;
+  }
+}
+
+.dose-main .badge {
+  justify-self: start;
+  margin-left: 0;
+}
+.dose-done-line > .btn-link:only-child {
+  margin-left: 0;
+  padding-left: 0;
+}
+@media (min-width: 701px) {
+  .dose-main .badge {
+    justify-self: end;
   }
 }

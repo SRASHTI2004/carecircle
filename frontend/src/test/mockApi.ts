@@ -14,6 +14,7 @@ export const doses = [
     scheduled_at: slot("08:00"),
     status: "taken_on_time",
     logged_by: "elder",
+    logged_at: slot("08:02"),
   },
   {
     medication_id: 2,
@@ -24,6 +25,7 @@ export const doses = [
     scheduled_at: slot("09:00"),
     status: "missed",
     logged_by: null,
+    logged_at: null,
   },
   {
     medication_id: 3,
@@ -34,6 +36,7 @@ export const doses = [
     scheduled_at: slot("17:30"),
     status: "upcoming",
     logged_by: null,
+    logged_at: null,
   },
 ];
 

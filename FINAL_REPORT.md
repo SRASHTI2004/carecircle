@@ -11,8 +11,9 @@ emergency card with Show to doctor + print, daily check-in with alerts, duplicat
 draft and weekly summary with fallbacks and rate limits, landing page with one-click demo, AAA Elder mode, read aloud.
 
 ## Numbers
-* Backend: 96 tests, 96% coverage (CI gate 90%), ruff + mypy strict clean, pip-audit clean.
-* Frontend: 38 tests (incl. axe on every screen and WCAG contrast), ESLint + Prettier + tsc clean, `npm audit --omit=dev` clean.
+* Elder mode redesigned (light default + dark theme, grouped doses, Undo): verified in light and dark at desktop and phone width, 0 axe violations.
+* Backend: 98 tests, 96% coverage (CI gate 90%), ruff + mypy strict clean, pip-audit clean.
+* Frontend: 70 tests (incl. axe on every screen and WCAG contrast), ESLint + Prettier + tsc clean, `npm audit --omit=dev` clean.
 * Real-browser check (Edge, `npm run e2e`): 12 views x 4 roles/viewports, **0 axe violations (with colour contrast), 0 console errors**,
   no horizontal scroll at 390 px. Screenshots in `docs/screenshots`, raw result in `docs/browser-check.json`.
 * Real email: a test email through Gmail SMTP (STARTTLS 587, app password) was delivered from a local production-mode run.

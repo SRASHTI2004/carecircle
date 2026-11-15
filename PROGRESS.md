@@ -32,6 +32,15 @@ and open http://localhost:8000 (demo passcodes are on the login page).
 1. Deploy on Render (see top) and put the live URL in README.
 2. Polish: manual a11y pass in a browser, screenshots, try real Gemini key with a sample prescription.
 
+## Pass 3: Elder mode redesign (done)
+- Light high-contrast default theme + optional "Dark theme" switch (remembered in localStorage), soft navy dark palette.
+- Status = slim coloured left border + icon + text badge (no coloured cards). Doses grouped into Now and next / Later today / Done today.
+- Done doses show "Taken at 8:02 AM by Margaret" with Undo (new `undo` action in `POST /api/doses`, restores stock); only due/pending doses get big
+  Taken/Skip; later doses get a quiet "Mark as taken early" link. Two button styles only. Demo seed keeps today's earlier doses taken.
+- Verified in a real browser (Edge) in light and dark at desktop and phone width: 15 views, 0 axe violations (colour contrast included), 0 console errors.
+- Tests: backend 98 (96% coverage), frontend 70 (incl. AAA contrast for both themes, grouping, undo, theme switch).
+- Screenshots refreshed in docs/screenshots and used in the README.
+
 ## Pass 2 log
 - 13:07 IST: backend extended (routines, duplicate warning, passcode rotate/revoke, notification prefs, HTML email + retries + test email,
   emergency card, wellbeing check-ins with alerts, trend + per-medicine adherence, pagination, AI rate limit + cache, headers).

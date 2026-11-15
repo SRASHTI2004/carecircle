@@ -92,7 +92,7 @@ export const api = {
   setApproval: (require_approval: boolean) =>
     request<{ require_approval: boolean }>("PUT", "/settings", { require_approval }),
   today: () => request<{ now: string; doses: Dose[] }>("GET", "/doses/today"),
-  logDose: (medication_id: number, scheduled_at: string, action: "taken" | "skipped") =>
+  logDose: (medication_id: number, scheduled_at: string, action: "taken" | "skipped" | "undo") =>
     request<{ status: string }>("POST", "/doses", { medication_id, scheduled_at, action }),
   weekly: () => request<Weekly>("GET", "/adherence/weekly"),
   medications: () => request<Medication[]>("GET", "/medications"),

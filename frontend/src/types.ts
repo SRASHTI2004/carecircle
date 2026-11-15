@@ -37,6 +37,7 @@ export interface Dose {
   scheduled_at: string;
   status: DoseStatus;
   logged_by: string | null;
+  logged_at: string | null;
 }
 
 export interface Appointment {

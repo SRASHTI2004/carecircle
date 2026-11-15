@@ -34,7 +34,7 @@ async function session(role, viewport, fn) {
 
 const desktop = { width: 1280, height: 900 };
 const phone = { width: 390, height: 844 };
-const shot = (page, name) => page.screenshot({ path: `${shots}${name}.png`, fullPage: true });
+const shot = (page, name, fullPage = true) => page.screenshot({ path: `${shots}${name}.png`, fullPage });
 
 // Landing
 await session("landing", desktop, async (page) => {
@@ -48,8 +48,17 @@ await session("elder", desktop, async (page) => {
   await page.getByRole("button", { name: "Try as Elder" }).click();
   await page.getByRole("heading", { name: /Hello, Margaret/ }).waitFor();
   await page.getByRole("button", { name: /Mark .* as (done|taken)/ }).first().waitFor();
-  await shot(page, "02-elder-mode");
-  await axeCheck(page, "elder-mode");
+  await page.getByRole("heading", { name: "Today", exact: true }).waitFor();
+  await shot(page, "02-elder-light", false);
+  await shot(page, "02-elder-light-full");
+  await axeCheck(page, "elder-mode-light");
+  await page.getByRole("switch", { name: /Dark theme/ }).click();
+  await page.waitForTimeout(200);
+  await shot(page, "02-elder-dark", false);
+  await shot(page, "02-elder-dark-full");
+  await axeCheck(page, "elder-mode-dark");
+  step("elder dark theme");
+  await page.getByRole("switch", { name: /Dark theme/ }).click();
   await page.getByRole("button", { name: /Good/ }).first().click();
   await page.getByText("Thank you for checking in.").waitFor();
   step("elder check-in");
@@ -62,6 +71,7 @@ await session("elder", desktop, async (page) => {
     await page.waitForTimeout(400);
     const slug = tab.toLowerCase().replace(/[^a-z]+/g, "-");
     await shot(page, `03-standard-${slug}`);
+    if (slug === "today") await shot(page, "03-today-viewport", false);
     await axeCheck(page, `elder-${slug}`);
     step(`tab ${tab}`);
   }
@@ -77,6 +87,20 @@ await session("elder", desktop, async (page) => {
   await page.getByRole("button", { name: "Send test email" }).click();
   await page.locator(".toast").waitFor();
   step(`test email toast: ${await page.locator(".toast").innerText()}`);
+});
+
+// Elder on a phone: light and dark
+await session("elder-phone", phone, async (page) => {
+  await page.getByRole("button", { name: "Try as Elder" }).click();
+  await page.getByRole("heading", { name: "Today", exact: true }).waitFor();
+  await shot(page, "02-elder-phone-light", false);
+  await axeCheck(page, "elder-phone-light");
+  step("no horizontal scroll on phone (elder)", !(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1)));
+  await page.getByRole("switch", { name: /Dark theme/ }).click();
+  await page.waitForTimeout(200);
+  await shot(page, "02-elder-phone-dark", false);
+  await axeCheck(page, "elder-phone-dark");
+  await page.getByRole("switch", { name: /Dark theme/ }).click();
 });
 
 // Caretaker on a phone: add a routine, see duplicate guard

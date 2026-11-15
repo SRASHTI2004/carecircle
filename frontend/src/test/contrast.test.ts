@@ -42,23 +42,32 @@ describe("WCAG AA contrast of the standard theme (>= 4.5:1)", () => {
   });
 });
 
-describe("Elder mode meets WCAG AAA (>= 7:1 for text)", () => {
-  const e = (n: string) => token(`e-${n}`);
-  const pairs: [string, string][] = [
+describe.each([
+  ["light", "el"],
+  ["dark", "ed"],
+] as const)("Elder mode %s theme meets WCAG AAA (>= 7:1 for text)", (_theme, p) => {
+  const t = (n: string) => token(`${p}-${n}`);
+  const textPairs: [string, string][] = [
     ["text", "bg"],
     ["text", "card"],
     ["muted", "card"],
     ["muted", "bg"],
-    ["accent", "bg"],
     ["accent", "card"],
+    ["accent", "bg"],
+    ["accent-text", "accent"],
+    ["ok-fg", "ok-bg"],
+    ["up-fg", "up-bg"],
+    ["miss-fg", "miss-bg"],
+    ["skip-fg", "skip-bg"],
+    ["due-fg", "due-bg"],
   ];
-  it.each(pairs)("%s on %s", (fg, bg) => {
-    expect(ratio(e(fg), e(bg))).toBeGreaterThanOrEqual(7);
+  it.each(textPairs)("%s on %s", (fg, bg) => {
+    expect(ratio(t(fg), t(bg))).toBeGreaterThanOrEqual(7);
   });
-  it("borders have at least 3:1 non-text contrast", () => {
-    expect(ratio(e("line"), e("bg"))).toBeGreaterThanOrEqual(3);
-  });
-  it("primary button text on the accent colour", () => {
-    expect(ratio("#0b1f3a", e("accent"))).toBeGreaterThanOrEqual(7);
-  });
+  it.each(["st-taken", "st-up", "st-miss", "st-skip", "st-due", "line"])(
+    "%s is visible against the card (>= 3:1)",
+    (name) => {
+      expect(ratio(t(name), t("card"))).toBeGreaterThanOrEqual(3);
+    },
+  );
 });

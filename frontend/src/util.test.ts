@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { doseSentence, readAloudText } from "./components/ElderMode";
 import type { Dose } from "./types";
-import { formatTime, isTaken } from "./util";
+import { firstName, formatTime, groupDoses, isTaken } from "./util";
 
 const dose = (over: Partial<Dose> = {}): Dose => ({
   medication_id: 1,
@@ -12,6 +12,7 @@ const dose = (over: Partial<Dose> = {}): Dose => ({
   scheduled_at: "2025-03-03T08:00",
   status: "upcoming",
   logged_by: null,
+  logged_at: null,
   ...over,
 });
 
@@ -50,5 +51,32 @@ describe("read aloud text", () => {
 
   it("handles an empty day", () => {
     expect(readAloudText("Margaret", [])).toContain("no medicines");
+  });
+});
+
+describe("groupDoses", () => {
+  const now = "2025-03-03T12:00";
+  it("puts due, missed and the next 3 hours in 'now', later ones in 'later', finished ones in 'done'", () => {
+    const g = groupDoses(
+      [
+        dose({ scheduled_at: "2025-03-03T08:00", status: "taken_on_time" }),
+        dose({ scheduled_at: "2025-03-03T09:00", status: "missed" }),
+        dose({ scheduled_at: "2025-03-03T11:50", status: "due" }),
+        dose({ scheduled_at: "2025-03-03T14:59", status: "upcoming" }),
+        dose({ scheduled_at: "2025-03-03T15:01", status: "upcoming" }),
+        dose({ scheduled_at: "2025-03-03T07:00", status: "skipped" }),
+      ],
+      now,
+    );
+    expect(g.now.map((d) => d.scheduled_at.slice(11))).toEqual(["09:00", "11:50", "14:59"]);
+    expect(g.later.map((d) => d.scheduled_at.slice(11))).toEqual(["15:01"]);
+    expect(g.done).toHaveLength(2);
+  });
+});
+
+describe("firstName", () => {
+  it("uses the first word", () => {
+    expect(firstName("Margaret Sharma")).toBe("Margaret");
+    expect(firstName("  Joe ")).toBe("Joe");
   });
 });

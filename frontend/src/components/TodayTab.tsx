@@ -33,7 +33,16 @@ export function TodayTab({ me, notify }: Props) {
             </button>
           </p>
         )}
-        {today.data && <DoseList doses={today.data.doses} canLog={canLog} notify={notify} onChanged={refresh} />}
+        {today.data && (
+          <DoseList
+            doses={today.data.doses}
+            now={today.data.now}
+            elderName={me.profile.name}
+            canLog={canLog}
+            notify={notify}
+            onChanged={refresh}
+          />
+        )}
         {!canLog && <p className="muted">Family members can view doses but not change them.</p>}
       </section>
 

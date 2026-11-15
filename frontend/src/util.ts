@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { DoseStatus, Mood, NotifyType, Role } from "./types";
+import type { Dose, DoseStatus, Mood, NotifyType, Role } from "./types";
 
 export const ROLE_LABEL: Record<Role, string> = { elder: "Elder", caretaker: "Caretaker", family: "Family" };
 
@@ -101,7 +101,7 @@ export function stopSpeaking(): void {
 }
 
 export const STATUS_ICON: Record<DoseStatus, string> = {
-  upcoming: "⏳", // hourglass
+  upcoming: "◷", // clock face
   due: "⏰", // alarm clock
   taken_on_time: "✔", // check
   taken_late: "✔",
@@ -125,3 +125,51 @@ export const MOODS: { mood: Mood; label: string; icon: string }[] = [
   { mood: "okay", label: "Okay", icon: "😐" },
   { mood: "unwell", label: "Not well", icon: "🙁" },
 ];
+
+export interface DoseGroups {
+  now: Dose[];
+  later: Dose[];
+  done: Dose[];
+}
+
+const NEXT_WINDOW_MINUTES = 180;
+
+/**
+ * Split today's doses so the elder sees what matters first:
+ * "now" = due, missed (still markable) and anything within the next 3 hours,
+ * "later" = pending but further away, "done" = taken or skipped.
+ */
+export function groupDoses(doses: Dose[], now: string): DoseGroups {
+  const limit = new Date(now).getTime() + NEXT_WINDOW_MINUTES * 60_000;
+  const groups: DoseGroups = { now: [], later: [], done: [] };
+  for (const d of doses) {
+    if (isTaken(d.status) || d.status === "skipped") groups.done.push(d);
+    else if (d.status === "due" || d.status === "missed" || new Date(d.scheduled_at).getTime() <= limit)
+      groups.now.push(d);
+    else groups.later.push(d);
+  }
+  return groups;
+}
+
+export function firstName(full: string): string {
+  return full.trim().split(/\s+/)[0] ?? full;
+}
+
+export type Theme = "light" | "dark";
+const THEME_KEY = "carecircle.theme";
+
+export function loadTheme(): Theme {
+  try {
+    return localStorage.getItem(THEME_KEY) === "dark" ? "dark" : "light";
+  } catch {
+    return "light";
+  }
+}
+
+export function saveTheme(theme: Theme): void {
+  try {
+    localStorage.setItem(THEME_KEY, theme);
+  } catch {
+    /* storage unavailable: the choice lasts until reload */
+  }
+}

@@ -94,6 +94,39 @@ describe("Elder mode", () => {
   });
 });
 
+describe("Elder mode redesign", () => {
+  it("groups doses, shows a calm taken line with Undo, and only pending doses have Taken/Skip", async () => {
+    const { calls, user } = await signInAs("elder");
+    await screen.findByRole("heading", { name: /Now and next/ });
+    expect(screen.getByRole("heading", { name: /Later today/ })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Done today/ })).toBeInTheDocument();
+    expect(screen.getByText(/Taken at 8:02 AM by Margaret/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Mark Metformin at 8:00 AM as taken/ })).toBeNull();
+    expect(screen.getByRole("button", { name: /Mark Amlodipine at 9:00 AM as taken/ })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /Undo Metformin at 8:00 AM/ }));
+    await waitFor(() =>
+      expect(calls.find((c) => c.path === "/doses")?.body).toMatchObject({ medication_id: 1, action: "undo" }),
+    );
+  });
+
+  it("defaults to the light theme; the Dark theme switch changes and remembers it, with no a11y violations", async () => {
+    localStorage.clear();
+    const { user, view } = await signInAs("elder");
+    await screen.findByRole("heading", { name: /Now and next/ });
+    const root = view.container.querySelector(".elder");
+    expect(root).toHaveAttribute("data-theme", "light");
+    const toggle = screen.getByRole("switch", { name: /Dark theme/ });
+    expect(toggle).toHaveAttribute("aria-checked", "false");
+    await user.click(toggle);
+    expect(root).toHaveAttribute("data-theme", "dark");
+    expect(toggle).toHaveAttribute("aria-checked", "true");
+    expect(localStorage.getItem("carecircle.theme")).toBe("dark");
+    expect(await violations(view.container)).toEqual([]);
+    await user.click(toggle);
+    expect(root).toHaveAttribute("data-theme", "light");
+  });
+});
+
 describe("Standard view", () => {
   it("caretaker: every tab renders with no a11y violations", async () => {
     const { user, view } = await signInAs("caretaker");

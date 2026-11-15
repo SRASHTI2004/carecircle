@@ -94,7 +94,7 @@ class AppointmentIn(Strict):
 class DoseAction(Strict):
     medication_id: int
     scheduled_at: str
-    action: Literal["taken", "skipped"]
+    action: Literal["taken", "skipped", "undo"]
 
 
 class CommentIn(Strict):

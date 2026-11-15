@@ -435,3 +435,36 @@ def test_demo_addresses_are_never_sent_to_a_real_server(conn, smtp):
     assert mailer.send_email(conn, pid, "caretaker@example.com", "Hi", "plain") is False
     assert smtp.calls == [] and conn.execute("SELECT delivered, error FROM outbox").fetchone()["error"] == ""
     assert mailer.send_email(conn, pid, "real@gmail.com", "Hi", "plain") is True
+
+
+def test_undo_clears_a_dose_and_restores_stock(client, elder):
+    med = next(m for m in client.get("/api/medications", headers=elder).json() if m["kind"] == "medicine")
+    slot = next(
+        d for d in client.get("/api/doses/today", headers=elder).json()["doses"] if d["medication_id"] == med["id"]
+    )
+    body = {"medication_id": med["id"], "scheduled_at": slot["scheduled_at"]}
+    client.post("/api/doses", json={**body, "action": "taken"}, headers=elder)
+    taken = next(
+        d
+        for d in client.get("/api/doses/today", headers=elder).json()["doses"]
+        if d["scheduled_at"] == slot["scheduled_at"] and d["medication_id"] == med["id"]
+    )
+    assert taken["status"].startswith("taken") and taken["logged_at"] and taken["logged_by"] == "elder"
+    stock_taken = next(m for m in client.get("/api/medications", headers=elder).json() if m["id"] == med["id"])["stock"]
+    assert client.post("/api/doses", json={**body, "action": "undo"}, headers=elder).status_code == 200
+    after = next(
+        d
+        for d in client.get("/api/doses/today", headers=elder).json()["doses"]
+        if d["scheduled_at"] == slot["scheduled_at"] and d["medication_id"] == med["id"]
+    )
+    assert after["status"] in ("upcoming", "due", "missed") and after["logged_at"] is None
+    assert (
+        next(m for m in client.get("/api/medications", headers=elder).json() if m["id"] == med["id"])["stock"]
+        == stock_taken + 1
+    )
+    assert client.post("/api/doses", json={**body, "action": "undo"}, headers=elder).status_code == 409
+
+
+def test_family_cannot_undo(client, family):
+    body = {"medication_id": 1, "scheduled_at": "2025-01-01T08:00", "action": "undo"}
+    assert client.post("/api/doses", json=body, headers=family).status_code == 403

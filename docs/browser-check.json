@@ -1,9 +1,10 @@
 {
-  "base": "http://localhost:8767",
+  "base": "http://localhost:8771",
   "consoleErrors": [],
   "axe": {
     "landing": [],
-    "elder-mode": [],
+    "elder-mode-light": [],
+    "elder-mode-dark": [],
     "elder-today": [],
     "elder-medicines-routines": [],
     "elder-appointments": [],
@@ -12,12 +13,18 @@
     "elder-email-reminders": [],
     "elder-settings": [],
     "doctor-view": [],
+    "elder-phone-light": [],
+    "elder-phone-dark": [],
     "caretaker-phone-today": [],
     "family-care": []
   },
   "steps": [
     {
       "name": "landing renders",
+      "ok": true
+    },
+    {
+      "name": "elder dark theme",
       "ok": true
     },
     {
@@ -65,6 +72,10 @@
       "ok": true
     },
     {
+      "name": "no horizontal scroll on phone (elder)",
+      "ok": true
+    },
+    {
       "name": "caretaker adds routine",
       "ok": true
     },
@@ -83,7 +94,7 @@
   ],
   "summary": {
     "consoleErrors": 0,
-    "axePagesChecked": 12,
+    "axePagesChecked": 15,
     "axePagesWithViolations": 0,
     "failedSteps": 0
   }

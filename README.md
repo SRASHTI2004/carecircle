@@ -32,9 +32,16 @@ with two weeks of history):
 4. In **Settings** use *Send a test email* to see a real email (when SMTP is configured on the server).
 5. **Try as Family**: everything is view-only (no Taken/Skip, no Add buttons).
 
-| Elder mode | Standard view | Phone |
+| Elder mode (light, default) | Elder mode (dark theme) |
+|---|---|
+| ![Elder mode, light](docs/screenshots/02-elder-light.png) | ![Elder mode, dark](docs/screenshots/02-elder-dark.png) |
+
+| Elder mode on a phone (light) | Elder mode on a phone (dark) | Today view |
 |---|---|---|
-| ![Elder mode](docs/screenshots/02-elder-mode.png) | ![Today](docs/screenshots/03-standard-today.png) | ![Phone](docs/screenshots/06-phone-today.png) |
+| ![Phone, light](docs/screenshots/02-elder-phone-light.png) | ![Phone, dark](docs/screenshots/02-elder-phone-dark.png) | ![Today](docs/screenshots/03-today-viewport.png) |
+
+Full-length pages: [Elder light](docs/screenshots/02-elder-light-full.png), [Elder dark](docs/screenshots/02-elder-dark-full.png),
+[Today](docs/screenshots/03-standard-today.png).
 
 More: [emergency card](docs/screenshots/03-standard-emergency-card.png),
 [show to doctor](docs/screenshots/04-show-to-doctor.png), [settings](docs/screenshots/03-standard-settings.png),
@@ -70,8 +77,10 @@ gives the whole circle a shared view, proactive emails, and puts the elder's cho
   answers in a row email the caretakers.
 * **AI with Gemini (optional, never medical advice):** a prescription photo becomes a **draft** a human must review and
   confirm, and a plain-language weekly family summary with a non-AI fallback.
-* **Elder mode:** very large text, AAA contrast (navy, white, warm accent), big rounded cards, status shown with icon +
-  text + colour, *Read aloud* with the Web Speech API.
+* **Elder mode:** calm light theme by default (off-white, near-black, deep blue) with an optional soft dark navy theme,
+  very large text, WCAG AAA contrast in both themes, doses grouped into *Now and next*, *Later today* and *Done today*,
+  status shown by a slim coloured border + icon + text, big Taken/Skip buttons only for what is due, a calm
+  "Taken at 8:02 AM by Margaret" line with *Undo* once done, and *Read aloud* with the Web Speech API.
 
 ## Requirements traceability
 
@@ -155,7 +164,7 @@ Semantic landmarks and one `h1` per view, a skip link, a label for every input, 
 shown with icon + text + colour, `aria-live` messages, an accessible 7-day chart with a hidden data table, focus moved
 into the full-screen doctor view and `Escape` closes it, `lang="en"`, responsive down to phone width,
 `prefers-reduced-motion` respected, and text that scales with the browser font size.
-Elder mode is WCAG **AAA** (white on navy about 17:1, accent on navy about 11:1).
+Elder mode is WCAG **AAA** in both themes (every text pair at 7:1 or better, status colours 3:1 or better, checked by tests).
 Verified three ways: **axe-core in unit tests** on every screen (`npm test`), a **real-browser run** (Edge via
 Playwright, `npm run e2e`) with axe including colour contrast on 12 views as each role (0 violations, 0 console errors),
 and **computed contrast tests** for the CSS tokens. See `AUDIT.md`.
@@ -203,9 +212,9 @@ For hot-reload UI work run `npm run dev` in `frontend/` (it proxies `/api` to po
 ## Tests and coverage
 
 ```bash
-cd backend && ../.venv/Scripts/python -m pytest --cov=app          # 96 tests, 96% coverage (CI requires >= 90%)
+cd backend && ../.venv/Scripts/python -m pytest --cov=app          # 98 tests, 96% coverage (CI requires >= 90%)
 cd backend && ../.venv/Scripts/ruff check . && ../.venv/Scripts/ruff format --check . && ../.venv/Scripts/mypy app
-cd frontend && npm run lint && npm run format:check && npm test && npm run build     # 38 tests incl. axe + contrast
+cd frontend && npm run lint && npm run format:check && npm test && npm run build     # 70 tests incl. axe + AAA contrast (both themes)
 cd frontend && npm run e2e -- http://localhost:8000                # real-browser click-through (needs Edge/Chrome)
 ```
 

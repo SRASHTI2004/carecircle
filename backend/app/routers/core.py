@@ -245,12 +245,17 @@ def log_dose(
     existing = conn.execute(
         "SELECT status FROM dose_logs WHERE medication_id = ? AND scheduled_at = ?", (med["id"], fmt_slot(slot))
     ).fetchone()
-    conn.execute(
-        "INSERT INTO dose_logs (medication_id, scheduled_at, status, logged_at, logged_by) VALUES (?,?,?,?,?)"
-        " ON CONFLICT(medication_id, scheduled_at) DO UPDATE SET status=excluded.status, logged_at=excluded.logged_at,"
-        " logged_by=excluded.logged_by",
-        (med["id"], fmt_slot(slot), body.action, fmt_slot(now), session.role),
-    )
+    if body.action == "undo":
+        if existing is None:
+            raise HTTPException(409, "That dose has not been marked yet.")
+        conn.execute("DELETE FROM dose_logs WHERE medication_id = ? AND scheduled_at = ?", (med["id"], fmt_slot(slot)))
+    else:
+        conn.execute(
+            "INSERT INTO dose_logs (medication_id, scheduled_at, status, logged_at, logged_by) VALUES (?,?,?,?,?)"
+            " ON CONFLICT(medication_id, scheduled_at) DO UPDATE SET status=excluded.status,"
+            " logged_at=excluded.logged_at, logged_by=excluded.logged_by",
+            (med["id"], fmt_slot(slot), body.action, fmt_slot(now), session.role),
+        )
     # Keep the pill count honest when a dose flips between taken and not taken.
     was_taken = bool(existing and existing["status"] == "taken")
     if med["kind"] != "medicine":

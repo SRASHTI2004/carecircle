@@ -1,7 +1,19 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
 import type { Dose, Me } from "../types";
-import { DISCLAIMER, formatDateTime, formatTime, isTaken, Notify, speak, stopSpeaking, useLoad } from "../util";
+import {
+  DISCLAIMER,
+  formatDateTime,
+  formatTime,
+  isTaken,
+  loadTheme,
+  Notify,
+  saveTheme,
+  speak,
+  stopSpeaking,
+  Theme,
+  useLoad,
+} from "../util";
 import { CheckinCard } from "./CheckinCard";
 import { DoseList } from "./DoseList";
 import { EmergencyTab } from "./EmergencyTab";
@@ -40,10 +52,17 @@ export function ElderMode({ me, notify, pendingVersion, onResolved, onExit, onLo
   const appts = useLoad(api.appointments);
   const [speaking, setSpeaking] = useState(false);
   const [showCard, setShowCard] = useState(false);
+  const [theme, setTheme] = useState<Theme>(loadTheme);
   const canLog = me.role !== "family";
   const next = appts.data?.[0];
 
   useEffect(() => stopSpeaking, []);
+
+  function toggleTheme() {
+    const nextTheme: Theme = theme === "dark" ? "light" : "dark";
+    setTheme(nextTheme);
+    saveTheme(nextTheme);
+  }
 
   function readAloud() {
     if (speaking) {
@@ -60,28 +79,43 @@ export function ElderMode({ me, notify, pendingVersion, onResolved, onExit, onLo
     window.setTimeout(() => setSpeaking(false), Math.min(60_000, text.length * 80));
   }
 
+  const dateLabel = new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" });
+
   return (
-    <div className="elder">
+    <div className="elder" data-theme={theme}>
       <header className="elder-head">
-        <h1>Hello, {me.role === "elder" ? me.profile.name : `${me.profile.name}'s day`}</h1>
-        <div className="row wrap">
-          <button className="btn btn-big btn-secondary" onClick={onExit}>
+        <div>
+          <p className="elder-date">{dateLabel}</p>
+          <h1>Hello, {me.role === "elder" ? me.profile.name : `${me.profile.name}'s day`}</h1>
+        </div>
+        <div className="elder-tools">
+          <button
+            className="btn btn-secondary theme-toggle"
+            role="switch"
+            aria-checked={theme === "dark"}
+            onClick={toggleTheme}
+          >
+            <span aria-hidden="true">{"☾"} </span>Dark theme
+            <span className="switch" aria-hidden="true" />
+          </button>
+          <button className="btn btn-secondary" onClick={onExit}>
             Standard view
           </button>
-          <button className="btn btn-big btn-secondary" onClick={onLogout}>
+          <button className="btn btn-secondary" onClick={onLogout}>
             Sign out
           </button>
         </div>
       </header>
 
       <button className="btn btn-huge btn-primary" onClick={readAloud} aria-pressed={speaking}>
+        <span aria-hidden="true">{"🔊"} </span>
         {speaking ? "Stop reading" : "Read today's medicines aloud"}
       </button>
 
       <PendingPanel me={me} notify={notify} large version={pendingVersion} onResolved={onResolved} />
 
       <section aria-labelledby="e-today">
-        <h2 id="e-today">Today's medicines and routines</h2>
+        <h2 id="e-today">Today</h2>
         {today.loading && <p role="status">Loading...</p>}
         {today.error && (
           <p role="alert" className="error">
@@ -92,6 +126,8 @@ export function ElderMode({ me, notify, pendingVersion, onResolved, onExit, onLo
           <DoseList
             large
             doses={today.data.doses}
+            now={today.data.now}
+            elderName={me.profile.name}
             canLog={canLog}
             notify={notify}
             onChanged={() => void today.reload()}

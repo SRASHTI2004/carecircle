@@ -92,6 +92,7 @@ def doses_between(
                     "scheduled_at": key,
                     "status": status,
                     "logged_by": log["logged_by"] if log else None,
+                    "logged_at": log["logged_at"] if log else None,
                 }
             )
     doses.sort(key=lambda d: (d["scheduled_at"], d["name"]))
