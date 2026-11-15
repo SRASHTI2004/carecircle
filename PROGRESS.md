@@ -14,7 +14,7 @@ _Nothing yet._ (Deploying on Render needs the owner to connect the GitHub repo i
 python -m venv .venv && .venv/Scripts/pip install -r backend/requirements-dev.txt
 cd backend && ../.venv/Scripts/python -m pytest --cov=app
 ```
-50 tests pass, ~93% coverage.
+62 tests pass, ~93% coverage. AI endpoints (`/api/ai/prescription`, `/api/ai/weekly-summary`) done with fallbacks.
 
 ## Next
 1. React + TypeScript frontend (login, Today, medications, appointments, outbox)
