@@ -24,6 +24,10 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name
 log = logging.getLogger("carecircle")
 DIST = ROOT / "frontend" / "dist"
 
+MAX_JSON_BODY_BYTES = 64 * 1024  # every JSON body in this API is tiny
+MAX_UPLOAD_BODY_BYTES = 6 * 1024 * 1024  # prescription photos (5 MB) plus form overhead
+UPLOAD_PATH = "/api/ai/prescription"
+
 CSP = (
     "default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; "
     "script-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'"
@@ -72,6 +76,21 @@ def create_app() -> FastAPI:
     )
 
     @app.middleware("http")
+    async def limit_body_size(request: Request, call_next: RequestResponseEndpoint) -> Response:
+        """Reject oversized request bodies before they are read (413)."""
+        limit = MAX_UPLOAD_BODY_BYTES if request.url.path == UPLOAD_PATH else MAX_JSON_BODY_BYTES
+        length = request.headers.get("content-length", "")
+        if length.isdigit() and int(length) > limit:
+            return JSONResponse(status_code=413, content={"detail": "That request is too large."})
+        return await call_next(request)
+
+    @app.exception_handler(Exception)
+    async def unexpected_error(request: Request, exc: Exception) -> JSONResponse:
+        """Log unexpected errors server-side only; the client never sees a stack trace or internals."""
+        log.error("unhandled error on %s %s: %s", request.method, request.url.path, type(exc).__name__)
+        return JSONResponse(status_code=500, content={"detail": "Something went wrong on our side. Please try again."})
+
+    @app.middleware("http")
     async def security_headers(request: Request, call_next: RequestResponseEndpoint) -> Response:
         """Add security headers to every response."""
         response: Response = await call_next(request)
@@ -80,6 +99,9 @@ def create_app() -> FastAPI:
         response.headers.setdefault("X-Frame-Options", "DENY")
         response.headers.setdefault("Referrer-Policy", "no-referrer")
         response.headers.setdefault("Permissions-Policy", "camera=(self), microphone=()")
+        response.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+        response.headers.setdefault("Cross-Origin-Opener-Policy", "same-origin")
+        response.headers.setdefault("Cross-Origin-Resource-Policy", "same-origin")
         if request.url.path.startswith("/api"):
             response.headers.setdefault("Cache-Control", "no-store")
         return response
