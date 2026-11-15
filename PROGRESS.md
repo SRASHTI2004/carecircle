@@ -1,24 +1,33 @@
 # PROGRESS
 
-## Blocked / needs the owner
-_Nothing yet._ (Deploying on Render needs the owner to connect the GitHub repo in the Render dashboard and set GEMINI_API_KEY / SMTP vars there.)
+## BLOCKED: needs the owner (deployment)
+I cannot create the Render service from here (it needs your Render account). To deploy (about 3 minutes):
+1. Render dashboard -> New -> **Blueprint** -> pick this GitHub repo (it reads `render.yaml`).
+2. In the service's Environment tab add `GEMINI_API_KEY` (and optionally `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`,
+   `SMTP_PASSWORD`, `FROM_EMAIL`). `REMINDER_TOKEN` is generated automatically.
+3. If Render gives a URL other than `https://carecircle.onrender.com`, update `CORS_ORIGINS` (same-origin requests work
+   regardless) and the live link in `README.md`.
+4. Optional: free cron (cron-job.org) -> `POST <url>/api/reminders/run` with header `X-Reminder-Token: <REMINDER_TOKEN>`.
+Docker is not installed on the dev machine, so the Dockerfile has not been built locally (the same steps were run
+manually: `npm run build`, then uvicorn serving `frontend/dist`, smoke-tested OK).
 
 ## Done
-- **Frontend (steps 5-6 UI)**: React+TS (Vite) with login + demo passcodes, Today view (Taken/Skip), medications (incl. AI prescription draft review), appointments, care circle (AI weekly summary, notes, activity log), demo outbox, settings (elder approval toggle, contacts), Elder mode (large/high-contrast, Read aloud, approvals). Served by FastAPI from frontend/dist.
-- **Step 1-4, 7 (backend)**: FastAPI + SQLite. Profiles with bcrypt passcodes per role, rate-limited login, session tokens,
-  role permissions, activity log, medications + dose/adherence tracking, appointments, reminder engine
-  (upcoming / missed / appointment 1d+2h / low stock), `/api/reminders/run`, demo outbox, demo seed (`DEMO` profile).
-- Dockerfile + render.yaml (single web service).
+- **Features 1-4, 7 (backend)**: FastAPI + SQLite. Profiles with bcrypt passcodes per role, rate-limited login,
+  session tokens, role permissions, activity log, medications + dose/adherence tracking, appointments, reminders
+  (upcoming / missed / appointment 1d + 2h / low stock), `/api/reminders/run`, demo outbox, `DEMO` seed profile.
+- **Feature 5**: Elder mode (large text, high contrast, Read aloud), elder-approval workflow ("pending elder approval").
+- **Feature 6**: Gemini prescription-photo draft + weekly family summary, schema-validated with fallbacks.
+- React + TypeScript frontend served by FastAPI. Dockerfile, render.yaml, CI workflow, README.
 
 ## How to test
 ```
 python -m venv .venv && .venv/Scripts/pip install -r backend/requirements-dev.txt
-cd backend && ../.venv/Scripts/python -m pytest --cov=app
+cd backend && ../.venv/Scripts/python -m pytest --cov=app      # 62 tests, ~93% coverage
+cd frontend && npm ci && npm test && npm run build              # 5 unit tests + typecheck + build
 ```
-62 tests pass, ~93% coverage. AI endpoints (`/api/ai/prescription`, `/api/ai/weekly-summary`) done with fallbacks.
+Run locally: build the frontend, then `cd backend && ../.venv/Scripts/python -m uvicorn app.main:app --port 8000`
+and open http://localhost:8000 (demo passcodes are on the login page).
 
-## Next (updated)
-1. React + TypeScript frontend (login, Today, medications, appointments, outbox)
-2. Elder mode, read aloud, approvals UI
-3. Gemini features
-4. README, accessibility polish, deploy
+## Next
+1. Deploy on Render (see top) and put the live URL in README.
+2. Polish: manual a11y pass in a browser, screenshots, try real Gemini key with a sample prescription.
